@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+/* À l'impression, seul le puzzle doit rester : ni réglages, ni statistiques. */
+@media print {
+  @page {
+    margin: 10mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}

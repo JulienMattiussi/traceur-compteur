@@ -1,0 +1,63 @@
+import { rgbaToGray } from '@/lib/binarize'
+
+export interface LoadedImage {
+  name: string
+  width: number
+  height: number
+  gray: Uint8Array
+  /** Dimensions d'origine, avant réduction éventuelle. */
+  sourceWidth: number
+  sourceHeight: number
+}
+
+/**
+ * Décode un fichier image en niveaux de gris via le canvas du navigateur.
+ *
+ * C'est ce qui permet de tout faire côté client : le navigateur sait déjà lire
+ * JPEG, PNG, WebP et GIF, donc aucun codec à embarquer et aucune image envoyée
+ * sur un serveur.
+ */
+export async function loadGrayImage(file: File, maxDimension = 1400): Promise<LoadedImage> {
+  const bitmap = await createImageBitmap(file)
+
+  try {
+    const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height))
+    const width = Math.max(1, Math.round(bitmap.width * scale))
+    const height = Math.max(1, Math.round(bitmap.height * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+    if (!context) throw new Error('Le canvas 2D est indisponible dans ce navigateur.')
+
+    // Fond blanc explicite : un PNG transparent doit devenir du papier, pas du noir.
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, width, height)
+    context.drawImage(bitmap, 0, 0, width, height)
+
+    const { data } = context.getImageData(0, 0, width, height)
+
+    return {
+      name: file.name,
+      width,
+      height,
+      gray: rgbaToGray(data),
+      sourceWidth: bitmap.width,
+      sourceHeight: bitmap.height,
+    }
+  } finally {
+    bitmap.close()
+  }
+}
+
+/** Déclenche le téléchargement d'un fichier texte produit dans le navigateur. */
+export function downloadText(filename: string, content: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([content], { type }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}

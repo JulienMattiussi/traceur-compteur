@@ -1,0 +1,163 @@
+import { binarize, type BinarizeOptions } from '@/lib/binarize'
+import { classifyInterior, countInkComponents } from '@/lib/baseline'
+import { buildGraph, type GraphOptions } from '@/lib/graph'
+import { checkQuality } from '@/lib/quality'
+import { placeDots, type DotOptions } from '@/lib/simplify'
+import { thin } from '@/lib/thin'
+import { decomposeTrails, minimumTrailCount } from '@/lib/trails'
+import type { DotSequence, GeometryStats, Mask, Puzzle, SkeletonGraph } from '@/lib/types'
+
+export interface PipelineOptions extends BinarizeOptions, GraphOptions, DotOptions {}
+
+const DEFAULT_OPTIONS: Required<Omit<PipelineOptions, 'threshold' | 'maxDots'>> & {
+  threshold: number | 'auto'
+  maxDots?: number
+} = {
+  threshold: 'auto',
+  minBlobArea: 24,
+  pruneSpursBelow: 6,
+  tolerance: 1.8,
+  minSpacing: 7,
+  // Sous deux fois l'espacement minimal, un parcours ne peut pas porter deux
+  // pastilles lisibles.
+  minTrailLength: 14,
+}
+
+/** Chronomètre monotone, disponible côté navigateur comme côté Node. */
+const now = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+
+export interface Analysis {
+  mask: Mask
+  skeleton: Mask
+  graph: SkeletonGraph
+  geometry: GeometryStats
+  timings: Record<string, number>
+}
+
+/** Binarise, squelettise et vectorise. Séparé du placement des points, qui se rejoue à volonté. */
+export function analyse(
+  gray: Uint8Array,
+  width: number,
+  height: number,
+  options: PipelineOptions = {},
+): Analysis {
+  const settings = { ...DEFAULT_OPTIONS, ...options }
+  const timings: Record<string, number> = {}
+
+  let mark = now()
+  const mask = binarize(gray, width, height, settings)
+  timings.binarize = now() - mark
+
+  mark = now()
+  const skeleton = thin(mask)
+  timings.thin = now() - mark
+
+  mark = now()
+  const graph = buildGraph(skeleton, settings)
+  timings.graph = now() - mark
+
+  mark = now()
+  const interior = classifyInterior(mask, skeleton)
+  const contourLoops = countInkComponents(mask)
+  timings.baseline = now() - mark
+
+  let skeletonPixels = 0
+  for (let i = 0; i < skeleton.data.length; i++) skeletonPixels += skeleton.data[i]!
+
+  const junctions = graph.nodes.filter((node) => node.degree >= 3).length
+  const strokeLength = graph.edges.reduce((total, edge) => total + edge.length, 0)
+
+  // Une arête est intérieure si la majorité de ses pixels l'est : la
+  // classification est locale, un trait peut affleurer la silhouette à une
+  // extrémité sans en faire partie.
+  let interiorEdges = 0
+  let interiorLength = 0
+  for (const edge of graph.edges) {
+    let inside = 0
+    for (const point of edge.points) {
+      if (interior[point.y * width + point.x] === 1) inside++
+    }
+    if (inside * 2 > edge.points.length) {
+      interiorEdges++
+      interiorLength += edge.length
+    }
+  }
+
+  return {
+    mask,
+    skeleton,
+    graph,
+    timings,
+    geometry: {
+      skeletonPixels,
+      nodes: graph.nodes.length,
+      junctions,
+      edges: graph.edges.length,
+      interiorEdges,
+      strokeLength,
+      interiorLength,
+      contourLoops,
+    },
+  }
+}
+
+/** Chaîne complète : image en niveaux de gris vers puzzle numéroté. */
+export function generatePuzzle(
+  gray: Uint8Array,
+  width: number,
+  height: number,
+  options: PipelineOptions = {},
+): Puzzle {
+  const analysis = analyse(gray, width, height, options)
+  return buildPuzzle(analysis, width, height, options)
+}
+
+export function buildPuzzle(
+  analysis: Analysis,
+  width: number,
+  height: number,
+  options: PipelineOptions = {},
+): Puzzle {
+  const settings = { ...DEFAULT_OPTIONS, ...options }
+  const timings = { ...analysis.timings }
+
+  let mark = now()
+  const trails = decomposeTrails(analysis.graph)
+  const minSequences = minimumTrailCount(analysis.graph)
+  timings.trails = now() - mark
+
+  mark = now()
+  const placement = placeDots(trails, settings)
+  timings.dots = now() - mark
+
+  let running = 1
+  const sequences: DotSequence[] = placement.sequences.map((sequence) => {
+    const result: DotSequence = { ...sequence, firstNumber: running }
+    running += sequence.dots.length
+    return result
+  })
+
+  mark = now()
+  const quality = checkQuality(sequences, width, settings.minSpacing)
+  timings.quality = now() - mark
+
+  return {
+    width,
+    height,
+    sequences,
+    stats: {
+      ...analysis.geometry,
+      dots: sequences.reduce((total, sequence) => total + sequence.dots.length, 0),
+      sequences: sequences.length,
+      minSequences,
+      tolerance: placement.tolerance,
+      maxDeviation: placement.maxDeviation,
+      minSpacing: quality.minSpacing,
+      crowdedPairs: quality.crowdedPairs,
+      droppedTrails: placement.droppedTrails,
+      droppedLength: placement.droppedLength,
+      ambiguities: quality.ambiguities,
+      timings,
+    },
+  }
+}
