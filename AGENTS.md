@@ -46,19 +46,20 @@ src/
 │   ├── binarize.ts           # Otsu + seuillage + despeckle + rgbaToGray
 │   ├── thin.ts               # Squelettisation Zhang-Suen
 │   ├── graph.ts              # Squelette -> graphe, et ses trois nettoyages
+│   ├── bridge.ts             # Ponts entre sommets impairs : le levier des séquences
 │   ├── trails.ts             # Décomposition eulérienne minimale (Hierholzer)
 │   ├── simplify.ts           # RDP indexé, espacement, budget, écart exact
 │   ├── quality.ts            # Ambiguïtés et encombrement (index spatial)
 │   ├── baseline.ts           # Mesure ce qu'un contour extérieur perdrait
 │   ├── pipeline.ts           # analyse() puis buildPuzzle()
-│   ├── svg.ts                # Export SVG (puzzle, solution, ou les deux)
+│   ├── svg.ts                # Export SVG (puzzle, solution, fond transparent)
 │   ├── settings.ts           # Réglages UI + conversion mm imprimés -> pixels
 │   └── image.ts             # Décodage via canvas + téléchargement (touche au DOM)
 ├── components/
 │   ├── Dropzone.tsx          # Dépôt de fichier (glisser ou parcourir)
 │   ├── Controls.tsx          # Curseurs de réglage
 │   ├── StatsPanel.tsx        # Mesures du dessin, du puzzle et de la qualité
-│   └── PuzzlePreview.tsx     # Aperçu (injecte le SVG du moteur)
+│   └── PuzzlePreview.tsx     # Aperçu, avec l'image source en surimpression
 ├── App.tsx                   # État, mémoïsation en deux étages, actions
 ├── main.tsx                  # Point d'entrée
 └── index.css                 # Import Tailwind + styles d'impression
@@ -82,10 +83,11 @@ image
   └─1─ binarize    seuil d'Otsu, puis despeckle       -> masque binaire
   └─2─ thin        Zhang-Suen                          -> traits de 1 px
   └─3─ buildGraph  sommets = extrémités et jonctions   -> graphe
-  └─4─ trails      décomposition eulérienne minimale   -> K séquences
-  └─5─ placeDots   RDP + espacement + budget           -> points numérotés
-  └─6─ quality     ambiguïtés et encombrement          -> mesures
-  └─7─ svg         export imprimable
+  └─4─ bridge      ponts courts entre sommets impairs   -> graphe plus pair
+  └─5─ trails      décomposition eulérienne minimale    -> K séquences
+  └─6─ placeDots   RDP + espacement + budget + 3 points -> points numérotés
+  └─7─ quality     ambiguïtés et encombrement           -> mesures
+  └─8─ svg         export imprimable
 ```
 
 ### 3. Le graphe, et pourquoi il a besoin de trois nettoyages
@@ -107,7 +109,35 @@ pixels à trois voisins** rien qu'à cause de l'escalier des diagonales. D'où :
 Effet mesuré : un cercle passe de 16 traits à **1**, et le lapin endormi de 396
 traits à **171**.
 
-### 4. Le nombre de séquences est optimal, et c'est démontrable
+### 4. Les ponts, seul vrai levier sur le nombre de séquences
+
+Un sommet de degré impair **force** une fin de séquence : sur un T, un parcours
+traverse la jonction en empruntant deux des trois traits, jamais les trois. Le
+lapin endormi en compte 134 (60 vraies extrémités de traits, 74 jonctions
+impaires), d'où 67 séquences au mieux.
+
+Ébarber davantage ne sert presque à rien (mesuré : 61 séquences à 0 px
+d'ébarbage, 51 à 32 px). La seule façon d'en avoir moins est de **rendre ces
+sommets pairs**, donc d'ajouter des liaisons : un pont entre deux sommets impairs
+les rend tous deux pairs et supprime une séquence. S'ils appartenaient à deux
+composantes distinctes, il en supprime deux.
+
+`bridgeOddVertices` apparie les sommets impairs **du plus proche au plus loin**,
+chaque sommet ne servant qu'une fois, sous une distance maximale exprimée en
+millimètres imprimés. Cette limite fait tout le travail : elle garde les ajouts
+courts, donc invisibles, et laisse **naturellement séparés les objets réellement
+éloignés** (sur la scène à trois lapins, aucun pont n'apparaît entre les lapins,
+la carotte et le buisson).
+
+Effet mesuré à 8 mm sur le lapin endormi : **39 séquences ramenées à 16**, pour
+47 ponts ajoutant 7 % de longueur de trait. Vérifié à l'oeil : les ponts ne font
+que refermer les écarts là où une moustache ou un poil s'arrête juste avant le
+contour. Ils prolongent le dessin dans sa logique plutôt que de l'inventer.
+
+`make bench` écrit `*-ponts-vus-*.png`, le dessin en gris et **les ponts en
+rouge**. C'est le seul moyen honnête de juger un réglage de pontage.
+
+### 5. Le nombre de séquences est optimal, et c'est démontrable
 
 Pour chaque composante connexe, le minimum vaut exactement
 `max(1, impairs / 2)`, où `impairs` compte les sommets de degré impair. On
@@ -119,11 +149,18 @@ dernier fragment appartiendraient au même parcours.
 
 `minimumTrailCount()` expose la borne, affichée dans l'UI à côté du résultat.
 
-### 5. Le budget de points est une cible, pas un plafond
+### 6. Le budget de points est une cible, pas un plafond
 
 L'utilisateur demande « environ 400 points » et le moteur cherche par dichotomie
 la plus petite tolérance qui tienne dedans, en montant **ou en descendant**.
 Plancher à 0,6 px : en dessous on ne suivrait plus que le bruit de compression.
+
+**Jamais de séquence de deux points.** Un segment isolé coûte un lever de crayon
+et deux numéros pour presque rien. Mais une séquence de deux points peut être une
+**longue** moustache droite simplifiée en un seul segment : la jeter perdrait un
+trait bien visible. `promoteToThreeDots` lui insère donc son point milieu, et ne
+l'écarte que si elle est trop courte pour le porter. Coût mesuré : 2,3 % de trait
+perdu au lieu de 1,8 %.
 
 `simplifyIndices` renvoie des **indices** et non des points. C'est ce qui permet
 à `deviationByIndices` de mesurer l'écart **exactement** : chaque pixel d'origine
@@ -141,8 +178,10 @@ plus proche donnait n'importe quoi sur un parcours repassant près de lui-même
 | Jonctions | 81 | 121 | 174 |
 | Tracé intérieur | 69 % | 55 % | 38 % |
 | Sortie d'un contour seul | 19 boucles | 10 boucles | 33 boucles |
-| Séquences (mini théorique) | 39 (67) | 50 (57) | 68 (108) |
-| Temps total | ~200 ms | ~190 ms | ~240 ms |
+| Séquences sans pont | 39 | 50 | 69 |
+| **Séquences avec ponts à 8 mm** | **16** | **26** | **29** |
+| Longueur ajoutée par les ponts | 7 % | 4 % | 9 % |
+| Temps total | ~220 ms | ~145 ms | ~235 ms |
 
 **Le bon réglage** : environ **250 points par page A4 à 4 mm d'espacement**. Le
 vérifier à l'oeil est indispensable, les chiffres seuls trompent : à 500 points
@@ -150,6 +189,12 @@ la solution est superbe mais les **numéros se chevauchent** et le puzzle est
 injouable.
 
 ### Limites connues
+
+- **Les ponts ajoutent des traits absents de l'image.** C'est assumé et mesuré
+  (`stats.bridges`, `stats.bridgeLength`), mais au-delà de ~12 mm ils cessent de
+  prolonger le dessin pour commencer à le redessiner. L'appariement ne tient
+  compte que de la distance : il ne cherche pas à continuer la direction du trait
+  ni à éviter de traverser du blanc. C'est la première amélioration à faire.
 
 - **Encombrement local** : deux traits distincts qui passent à 2 mm l'un de
   l'autre (le double trait d'une oreille) portent forcément des pastilles
@@ -211,7 +256,11 @@ injouable.
   sa tolérance.
 
 ### Vérification visuelle
-Les chiffres ne suffisent pas, il faut regarder. `make bench` écrit dans `out/`
+Les chiffres ne suffisent pas, il faut regarder. Dans l'application, le bouton
+**« Image source »** superpose le dessin d'origine au puzzle, avec un curseur
+d'opacité : c'est le contrôle le plus direct, chaque pastille doit tomber sur
+l'axe d'un trait. Le SVG est alors rendu avec `transparent: true` ; l'export
+garde toujours son fond blanc. `make bench` écrit dans `out/`
 le squelette, la solution en couleurs par séquence, les pastilles nues et le SVG
 imprimable. Pour contrôler le rendu réel du SVG exporté :
 

@@ -35,6 +35,11 @@ export interface GraphEdge {
   points: Point[]
   /** Longueur cumulée en pixels. */
   length: number
+  /**
+   * Vrai pour une liaison ajoutée par le moteur, absente du dessin d'origine,
+   * destinée à réduire le nombre de séquences.
+   */
+  bridge?: boolean
 }
 
 export interface SkeletonGraph {
@@ -108,6 +113,9 @@ interface PuzzleStats extends GeometryStats {
   maxDeviation: number
   /** Distance minimale entre deux points consécutifs. */
   minSpacing: number
+  /** Liaisons ajoutées pour fusionner des séquences, et longueur ainsi ajoutée. */
+  bridges: number
+  bridgeLength: number
   /** Paires de pastilles trop proches pour rester lisibles. */
   crowdedPairs: number
   /** Parcours écartés car trop courts, et longueur de dessin ainsi perdue. */

@@ -215,12 +215,21 @@ export function placeDots(trails: Trail[], options: DotOptions = {}): DotPlaceme
       const simplified = simplifyIndices(trail.points, currentTolerance)
       const indices = enforceSpacingIndices(trail.points, simplified, minSpacing, trail.closed)
 
-      const dots = indices.map((index) => trail.points[index]!)
 
-      // Une séquence doit pouvoir porter au moins deux pastilles correctement
-      // espacées. Sinon c'est une boucle minuscule qui produirait deux numéros
-      // superposés : mieux vaut la retirer que la rendre illisible.
-      if (indices.length < 2 || spanOf(dots, trail.closed) < minSpacing) {
+      const usable = promoteToThreeDots(trail.points, indices, minSpacing)
+
+      // Une séquence de deux points n'est qu'un segment isolé : elle coûte un
+      // lever de crayon et deux numéros pour presque rien. On préfère lui ajouter
+      // son point milieu, et ne l'écarter que si elle est trop courte pour le
+      // porter.
+      if (usable === null) {
+        collapsedTrails++
+        collapsedLength += trail.length
+        continue
+      }
+
+      const dots = usable.map((index) => trail.points[index]!)
+      if (spanOf(dots, trail.closed) < minSpacing) {
         collapsedTrails++
         collapsedLength += trail.length
         continue
@@ -263,6 +272,37 @@ export function placeDots(trails: Trail[], options: DotOptions = {}): DotPlaceme
 
 function countDots(placement: DotPlacement): number {
   return placement.sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
+}
+
+/**
+ * Garantit au moins trois points par séquence.
+ *
+ * Un segment isolé à deux numéros n'apporte rien et coûte un lever de crayon. On
+ * y insère donc le point du tracé le plus proche de son milieu, à condition que
+ * les deux moitiés restent lisibles. Renvoie `null` si la séquence est trop
+ * courte pour le porter : elle doit alors être écartée.
+ */
+function promoteToThreeDots(
+  points: Point[],
+  indices: number[],
+  minSpacing: number,
+): number[] | null {
+  if (indices.length >= 3) return indices
+  if (indices.length < 2) return null
+
+  const first = indices[0]!
+  const last = indices[1]!
+  const middle = Math.floor((first + last) / 2)
+  if (middle === first || middle === last) return null
+
+  const cornerSpacing = minSpacing * 0.6
+  const a = points[first]!
+  const b = points[middle]!
+  const c = points[last]!
+  if (Math.hypot(b.x - a.x, b.y - a.y) < cornerSpacing) return null
+  if (Math.hypot(c.x - b.x, c.y - b.y) < cornerSpacing) return null
+
+  return [first, middle, last]
 }
 
 /** Longueur de la ligne brisée reliant les pastilles, fermeture comprise. */

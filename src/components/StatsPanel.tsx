@@ -54,6 +54,15 @@ export function StatsPanel({ puzzle }: StatsPanelProps) {
         value={`${s.sequences}`}
       />
       <Row
+        label="Liaisons ajoutées"
+        hint="traits absents de l'image d'origine"
+        value={
+          s.bridges === 0
+            ? 'aucune'
+            : `${s.bridges} (+${((s.bridgeLength / s.strokeLength) * 100).toFixed(1)} % de trait)`
+        }
+      />
+      <Row
         label="Fidélité"
         hint="écart maximal au dessin"
         value={`${(s.maxDeviation * mmPerPixel).toFixed(2)} mm en A4`}

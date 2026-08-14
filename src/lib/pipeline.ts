@@ -1,5 +1,6 @@
 import { binarize, type BinarizeOptions } from '@/lib/binarize'
 import { classifyInterior, countInkComponents } from '@/lib/baseline'
+import { bridgeOddVertices } from '@/lib/bridge'
 import { buildGraph, type GraphOptions } from '@/lib/graph'
 import { checkQuality } from '@/lib/quality'
 import { placeDots, type DotOptions } from '@/lib/simplify'
@@ -7,7 +8,13 @@ import { thin } from '@/lib/thin'
 import { decomposeTrails, minimumTrailCount } from '@/lib/trails'
 import type { DotSequence, GeometryStats, Mask, Puzzle, SkeletonGraph } from '@/lib/types'
 
-export interface PipelineOptions extends BinarizeOptions, GraphOptions, DotOptions {}
+export interface PipelineOptions extends BinarizeOptions, GraphOptions, DotOptions {
+  /**
+   * Distance maximale, en pixels, d'un pont ajouté entre deux sommets de degré
+   * impair. C'est le levier du nombre de séquences. 0 désactive.
+   */
+  bridgeGap?: number
+}
 
 const DEFAULT_OPTIONS: Required<Omit<PipelineOptions, 'threshold' | 'maxDots'>> & {
   threshold: number | 'auto'
@@ -18,6 +25,7 @@ const DEFAULT_OPTIONS: Required<Omit<PipelineOptions, 'threshold' | 'maxDots'>> 
   pruneSpursBelow: 6,
   tolerance: 1.8,
   minSpacing: 7,
+  bridgeGap: 0,
   // Sous deux fois l'espacement minimal, un parcours ne peut pas porter deux
   // pastilles lisibles.
   minTrailLength: 14,
@@ -122,8 +130,15 @@ export function buildPuzzle(
   const timings = { ...analysis.timings }
 
   let mark = now()
-  const trails = decomposeTrails(analysis.graph)
-  const minSequences = minimumTrailCount(analysis.graph)
+  // Les ponts se posent ici, pas dans `analyse` : c'est un choix de mise en
+  // forme du puzzle, qu'on veut pouvoir rejouer sans refaire la
+  // squelettisation. `analysis.graph` n'est jamais modifié.
+  const bridged = bridgeOddVertices(analysis.graph, settings.bridgeGap)
+  timings.bridge = now() - mark
+
+  mark = now()
+  const trails = decomposeTrails(bridged.graph)
+  const minSequences = minimumTrailCount(bridged.graph)
   timings.trails = now() - mark
 
   mark = now()
@@ -150,6 +165,8 @@ export function buildPuzzle(
       dots: sequences.reduce((total, sequence) => total + sequence.dots.length, 0),
       sequences: sequences.length,
       minSequences,
+      bridges: bridged.bridges,
+      bridgeLength: bridged.bridgeLength,
       tolerance: placement.tolerance,
       maxDeviation: placement.maxDeviation,
       minSpacing: quality.minSpacing,

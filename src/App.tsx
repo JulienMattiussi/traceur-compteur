@@ -18,6 +18,8 @@ export default function App() {
   const [image, setImage] = useState<LoadedImage | null>(null)
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [mode, setMode] = useState<ViewMode>('puzzle')
+  const [overlay, setOverlay] = useState(false)
+  const [overlayOpacity, setOverlayOpacity] = useState(35)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,7 +27,13 @@ export default function App() {
     setBusy(true)
     setError(null)
     try {
-      setImage(await loadGrayImage(file))
+      const loaded = await loadGrayImage(file)
+      // L'URL d'objet de l'image remplacée doit être révoquée, sinon son blob
+      // reste en mémoire pour toute la durée de la page.
+      setImage((previous) => {
+        if (previous) URL.revokeObjectURL(previous.sourceUrl)
+        return loaded
+      })
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Image illisible.')
       setImage(null)
@@ -54,8 +62,9 @@ export default function App() {
       maxDots: settings.maxDots,
       minSpacing,
       minTrailLength: minSpacing * 2,
+      bridgeGap: spacingInPixels(image.width, settings.bridgeMm),
     })
-  }, [analysis, image, settings.maxDots, settings.spacingMm])
+  }, [analysis, image, settings.maxDots, settings.spacingMm, settings.bridgeMm])
 
   const exportSvg = (): void => {
     if (!puzzle || !image) return
@@ -136,16 +145,61 @@ export default function App() {
                   </button>
                 </div>
 
+                {/*
+                  La surimpression a sa propre ligne, et la place du curseur y est
+                  réservée en permanence : sur la même ligne que les actions, son
+                  apparition faisait sauter les boutons suivants.
+                */}
+                <div className="mb-3 flex items-center gap-3 print:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOverlay((value) => !value)}
+                    aria-pressed={overlay}
+                    className={`rounded-md border px-3 py-1.5 text-sm ${
+                      overlay
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    Image source
+                  </button>
+
+                  <label
+                    className={`flex items-center gap-2 text-sm text-slate-600 ${
+                      overlay ? '' : 'invisible'
+                    }`}
+                  >
+                    <input
+                      type="range"
+                      min={5}
+                      max={100}
+                      value={overlayOpacity}
+                      disabled={!overlay}
+                      onChange={(event) => setOverlayOpacity(Number(event.target.value))}
+                      aria-label="Opacité de l'image source"
+                      aria-hidden={!overlay}
+                      className="w-28 accent-slate-900"
+                    />
+                    {/* Largeur fixe : sinon passer de 9 % à 100 % décalerait le texte. */}
+                    <span className="w-11 tabular-nums">{overlayOpacity} %</span>
+                  </label>
+                </div>
+
                 <div className="rounded-lg border border-slate-200 bg-white p-2 print:border-0">
-                  <PuzzlePreview puzzle={puzzle} mode={mode} />
+                  <PuzzlePreview
+                    puzzle={puzzle}
+                    mode={mode}
+                    overlayUrl={overlay ? (image?.sourceUrl ?? null) : null}
+                    overlayOpacity={overlayOpacity}
+                  />
                 </div>
 
                 {puzzle.sequences.length > 1 ? (
                   <p className="mt-3 text-sm text-slate-600 print:hidden">
                     Les numéros se suivent de 1 à {puzzle.stats.dots}. Un cercle autour d&apos;un
                     point signale qu&apos;il faut lever le crayon : le dessin compte{' '}
-                    {puzzle.stats.sequences} tracés séparés, et c&apos;est le minimum possible sans
-                    repasser deux fois sur un trait.
+                    {puzzle.stats.sequences} tracés séparés, et c&apos;est le minimum atteignable
+                    avec ces réglages. Pour en avoir moins, augmente les liaisons ajoutées.
                   </p>
                 ) : null}
               </>

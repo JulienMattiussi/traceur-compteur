@@ -8,6 +8,11 @@ export interface LoadedImage {
   /** Dimensions d'origine, avant réduction éventuelle. */
   sourceWidth: number
   sourceHeight: number
+  /**
+   * URL d'objet vers le fichier d'origine, pour l'afficher en surimpression.
+   * À révoquer quand l'image est remplacée, sinon le blob reste en mémoire.
+   */
+  sourceUrl: string
 }
 
 /**
@@ -46,6 +51,7 @@ export async function loadGrayImage(file: File, maxDimension = 1400): Promise<Lo
       gray: rgbaToGray(data),
       sourceWidth: bitmap.width,
       sourceHeight: bitmap.height,
+      sourceUrl: URL.createObjectURL(file),
     }
   } finally {
     bitmap.close()

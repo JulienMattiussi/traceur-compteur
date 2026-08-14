@@ -19,6 +19,11 @@ export interface Settings {
   maxDots: number
   /** Espacement minimal entre deux pastilles, en millimètres sur la page imprimée. */
   spacingMm: number
+  /**
+   * Longueur maximale, en millimètres imprimés, d'une liaison ajoutée entre deux
+   * traits pour fusionner deux séquences. 0 n'ajoute rien.
+   */
+  bridgeMm: number
   /** Longueur sous laquelle une barbule est considérée comme un artefact. */
   pruneSpursBelow: number
   /** Aire sous laquelle une tache d'encre est ignorée. */
@@ -30,6 +35,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   maxDots: 400,
   spacingMm: 4,
+  bridgeMm: 8,
   pruneSpursBelow: 6,
   minBlobArea: 24,
   threshold: 'auto',

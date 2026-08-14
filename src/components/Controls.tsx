@@ -73,6 +73,17 @@ export function Controls({ settings, onChange, disabled }: ControlsProps) {
       />
 
       <Slider
+        label="Liaisons ajoutées"
+        hint="Relie les traits qui s'arrêtent juste avant de se toucher. C'est le levier du nombre de séquences."
+        value={settings.bridgeMm}
+        min={0}
+        max={16}
+        unit="mm"
+        disabled={disabled}
+        onChange={(value) => update('bridgeMm', value)}
+      />
+
+      <Slider
         label="Ébarbage"
         hint="Supprime les barbules parasites des contours irréguliers."
         value={settings.pruneSpursBelow}

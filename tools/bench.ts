@@ -1,5 +1,6 @@
 import { mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
+import { bridgeOddVertices } from '@/lib/bridge'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
 import { PAGE_WIDTH_MM, spacingInPixels } from '@/lib/settings'
 import { renderSvg } from '@/lib/svg'
@@ -10,7 +11,6 @@ import { createRaster, drawDisc, drawPolyline, writePng, type Colour } from './r
 const FIXTURES = 'tools/fixtures'
 const OUT = 'out'
 const BUDGETS = [250, 500, 1000]
-const SPACINGS_MM = [3, 4, 5]
 
 const PALETTE: Colour[] = [
   [37, 99, 235],
@@ -63,6 +63,7 @@ function main(): void {
         maxDots,
         minSpacing,
         minTrailLength: minSpacing * 2,
+        bridgeGap: spacingInPixels(width, 8),
       })
       const s = puzzle.stats
       const totalMs = Object.values(s.timings).reduce((a, b) => a + b, 0)
@@ -72,13 +73,14 @@ function main(): void {
       const mmPerPixel = PAGE_WIDTH_MM / width
       console.log(
         `  budget ${String(maxDots).padStart(4)} -> ${String(s.dots).padStart(4)} points, ` +
-          `${String(s.sequences).padStart(3)} sequences (mini theorique ${s.minSequences}), ` +
+          `${String(s.sequences).padStart(3)} sequences (mini ${s.minSequences}, ${s.bridges} ponts), ` +
           `tol ${s.tolerance.toFixed(2)} px, ecart max ${s.maxDeviation.toFixed(1)} px ` +
           `(${(s.maxDeviation * mmPerPixel).toFixed(2)} mm en A4), ` +
           `espacement mini ${(s.minSpacing * mmPerPixel).toFixed(2)} mm, ` +
           `serres ${s.crowdedPairs}, ` +
           `perdu ${s.droppedTrails} traits (${((s.droppedLength / g.strokeLength) * 100).toFixed(1)} %), ` +
-          `ambigus ${s.ambiguities.length}, ${totalMs.toFixed(0)} ms`,
+          `ambigus ${s.ambiguities.length}, ${totalMs.toFixed(0)} ms, ` +
+          `plus petite sequence ${Math.min(...puzzle.sequences.map((q) => q.dots.length))} points`,
       )
 
       writePng(join(OUT, `${name}-${maxDots}-solution.png`), renderSolution(puzzle))
@@ -86,20 +88,36 @@ function main(): void {
       writeFileSync(join(OUT, `${name}-${maxDots}-puzzle.svg`), renderSvg(puzzle))
     }
 
-    // L'espacement imprimé est le vrai levier de lisibilité : il plafonne le
-    // nombre de points utiles, quel que soit le budget demandé.
-    for (const mm of SPACINGS_MM) {
-      const minSpacing = spacingInPixels(width, mm)
+    // Le pontage est le levier du nombre de séquences.
+    for (const mm of [0, 2, 4, 6, 9, 12]) {
+      const minSpacing = spacingInPixels(width, 4)
       const puzzle = buildPuzzle(analysis, width, height, {
-        maxDots: 2000,
+        maxDots: 300,
         minSpacing,
         minTrailLength: minSpacing * 2,
+        bridgeGap: spacingInPixels(width, mm),
       })
+      const st = puzzle.stats
       console.log(
-        `    espacement ${mm} mm -> ${String(puzzle.stats.dots).padStart(4)} points au maximum, ` +
-          `${String(puzzle.stats.sequences).padStart(3)} sequences, serres ${puzzle.stats.crowdedPairs}`,
+        `    pont ${String(mm).padStart(2)} mm -> ${String(st.sequences).padStart(3)} sequences ` +
+          `(mini ${String(st.minSequences).padStart(3)}), ${String(st.bridges).padStart(3)} ponts ` +
+          `ajoutant ${((st.bridgeLength / st.strokeLength) * 100).toFixed(1)} % de trait, ` +
+          `${st.dots} points`,
       )
-      writePng(join(OUT, `${name}-espacement-${mm}mm.png`), renderDotsOnly(puzzle))
+      writePng(join(OUT, `${name}-pont-${mm}mm.png`), renderSolution(puzzle))
+
+      // Les ponts en rouge sur le dessin en gris : le seul moyen de juger si les
+      // liaisons ajoutées sont acceptables ou si elles inventent des traits.
+      const bridged = bridgeOddVertices(analysis.graph, spacingInPixels(width, mm))
+      const view = createRaster(width, height)
+      for (const edge of bridged.graph.edges) {
+        if (edge.bridge) continue
+        drawPolyline(view, edge.points, [190, 195, 200], 1)
+      }
+      for (const edge of bridged.graph.edges) {
+        if (edge.bridge) drawPolyline(view, edge.points, [220, 20, 60], 2)
+      }
+      writePng(join(OUT, `${name}-ponts-vus-${mm}mm.png`), view)
     }
   }
 

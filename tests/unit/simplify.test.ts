@@ -137,6 +137,39 @@ describe('placeDots', () => {
     expect(placement.droppedLength).toBeGreaterThan(0)
   })
 
+  it('ne rend jamais une séquence de deux points', () => {
+    // Une droite se simplifie en deux points : on doit lui voir ajouter son
+    // milieu, pas la laisser en segment isolé.
+    const placement = placeDots([asTrail(straight(200))], { minSpacing: 7, minTrailLength: 0 })
+
+    expect(placement.sequences).toHaveLength(1)
+    expect(placement.sequences[0]!.dots).toHaveLength(3)
+    expect(placement.sequences[0]!.dots[1]!.x).toBeCloseTo(99, 0)
+  })
+
+  it('écarte un segment trop court pour porter trois points', () => {
+    const placement = placeDots([asTrail(straight(6))], { minSpacing: 7, minTrailLength: 0 })
+    expect(placement.sequences).toHaveLength(0)
+    expect(placement.droppedTrails).toBe(1)
+  })
+
+  it('garantit trois points minimum sur un lot de tracés variés', () => {
+    const trails = [
+      asTrail(straight(200)),
+      asTrail(straight(40)),
+      asTrail(straight(9)),
+      asTrail(
+        Array.from({ length: 300 }, (_, i) => ({ x: i, y: 40 * Math.sin(i / 20) })),
+      ),
+    ]
+    const placement = placeDots(trails, { minSpacing: 7, minTrailLength: 0 })
+
+    expect(placement.sequences.length).toBeGreaterThan(0)
+    for (const sequence of placement.sequences) {
+      expect(sequence.dots.length).toBeGreaterThanOrEqual(3)
+    }
+  })
+
   it('ne crée jamais de séquence à deux points collés', () => {
     const trails = [asTrail(straight(200)), asTrail(straight(30, 0.2))]
     const placement = placeDots(trails, { minSpacing: 7, minTrailLength: 0 })

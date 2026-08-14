@@ -77,6 +77,15 @@ describe('generatePuzzle', () => {
     expect(puzzle.stats.dots).toBeLessThanOrEqual(60)
   })
 
+  it('ne produit aucune séquence de moins de trois points', () => {
+    const puzzle = generatePuzzle(maskToGray(face()), 200, 200, { maxDots: 120 })
+
+    expect(puzzle.sequences.length).toBeGreaterThan(0)
+    for (const sequence of puzzle.sequences) {
+      expect(sequence.dots.length).toBeGreaterThanOrEqual(3)
+    }
+  })
+
   it('reste vide sur une image vierge', () => {
     const puzzle = generatePuzzle(new Uint8Array(400).fill(255), 20, 20)
     expect(puzzle.sequences).toHaveLength(0)

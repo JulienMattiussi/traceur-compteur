@@ -12,6 +12,11 @@ export interface SvgOptions {
   colorBySequence?: boolean
   /** N'affiche que le tracé, sans les points ni les numéros. */
   solutionOnly?: boolean
+  /**
+   * Omet le fond blanc, pour superposer le puzzle à l'image source. Jamais utilisé
+   * à l'export : un SVG transparent s'imprimerait sur n'importe quoi.
+   */
+  transparent?: boolean
 }
 
 const PALETTE = [
@@ -46,13 +51,14 @@ export function renderSvg(puzzle: Puzzle, options: SvgOptions = {}): string {
     showSolution = false,
     colorBySequence = false,
     solutionOnly = false,
+    transparent = false,
   } = options
   const parts: string[] = []
 
   parts.push(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`,
-    `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
   )
+  if (!transparent) parts.push(`<rect width="${width}" height="${height}" fill="#ffffff"/>`)
 
   if (showSolution || solutionOnly) {
     for (let s = 0; s < sequences.length; s++) {

@@ -21,8 +21,18 @@ interdit de le parcourir d'un seul trait.
 
 Plusieurs séquences numérotées, en **nombre minimal démontré** (la borne
 d'Euler, affichée à côté du résultat). La numérotation reste continue de 1 à N ;
-un anneau autour d'un point signale les rares endroits où lever le crayon.
+un anneau autour d'un point signale les endroits où lever le crayon.
 L'habitude du 1-2-3 est préservée.
+
+Pour éviter de multiplier les levers de crayon, le moteur **relie les traits qui
+s'arrêtent juste avant de se toucher** : une moustache qui frôle le contour, un
+poil qui s'interrompt. Chaque liaison supprime une séquence, et comme la limite
+est une distance, les objets réellement éloignés restent séparés tout seuls. Sur
+le lapin endormi : **16 séquences au lieu de 39**, pour 7 % de trait ajouté.
+
+Le curseur « liaisons ajoutées » permet d'arbitrer : à 0 mm on ne touche pas au
+dessin mais il faut lever le crayon souvent ; au-delà de 12 mm on commence à
+redessiner plutôt qu'à prolonger.
 
 ## Comment ça marche
 
@@ -44,8 +54,13 @@ make start      # http://localhost:1234
 Dépose un dessin au trait (coloriage, illustration, logo), règle le nombre de
 points et l'espacement, puis télécharge le SVG ou imprime.
 
-Le réglage qui marche : **environ 250 points par page A4 à 4 mm d'espacement**.
-Au-delà, la solution reste belle mais les numéros se chevauchent.
+Le bouton **« Image source »** superpose le dessin d'origine au puzzle, avec un
+curseur d'opacité : pratique pour vérifier d'un coup d'oeil que les points
+suivent bien les traits.
+
+Le réglage qui marche : **environ 250 points par page A4, 4 mm d'espacement et
+8 mm de liaisons**. Au-delà de 250 points, la solution reste belle mais les
+numéros se chevauchent.
 
 ## Bien choisir son image
 
