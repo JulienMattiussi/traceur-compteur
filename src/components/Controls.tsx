@@ -21,9 +21,9 @@ interface SliderProps {
 function Slider({ label, hint, value, min, max, step = 1, unit, disabled, onChange }: SliderProps) {
   return (
     <label className="block">
-      <span className="flex items-baseline justify-between">
+      <span className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-slate-800">{label}</span>
-        <span className="text-sm tabular-nums text-slate-500">
+        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs tabular-nums text-slate-700">
           {value}
           {unit ? ` ${unit}` : ''}
         </span>
@@ -36,9 +36,9 @@ function Slider({ label, hint, value, min, max, step = 1, unit, disabled, onChan
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-1 w-full accent-slate-900"
+        className="mt-1.5 w-full accent-sky-500"
       />
-      <span className="text-xs text-slate-500">{hint}</span>
+      <span className="mt-0.5 block text-xs leading-snug text-slate-500">{hint}</span>
     </label>
   )
 }
@@ -62,7 +62,7 @@ export function Controls({ settings, onChange, disabled }: ControlsProps) {
 
       <Slider
         label="Espacement des points"
-        hint="Plus il est petit, plus le tracé est fidèle. Les numéros sont replacés tout seuls pour ne jamais se chevaucher."
+        hint="Plus il est petit, plus le tracé est fidèle. Les numéros se replacent tout seuls."
         value={settings.spacingMm}
         min={1.5}
         max={10}
@@ -83,56 +83,67 @@ export function Controls({ settings, onChange, disabled }: ControlsProps) {
         onChange={(value) => update('bridgeMm', value)}
       />
 
-      <Slider
-        label="Ébarbage"
-        hint="Supprime les barbules parasites des contours irréguliers."
-        value={settings.pruneSpursBelow}
-        min={0}
-        max={40}
-        unit="px"
-        disabled={disabled}
-        onChange={(value) => update('pruneSpursBelow', value)}
-      />
+      {/* Réglages d'extraction : utiles mais rarement touchés, donc repliés. */}
+      <details className="border-t border-slate-100 pt-3">
+        <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700">
+          Extraction des traits
+        </summary>
 
-      <Slider
-        label="Taille minimale des taches"
-        hint="Ignore les petites salissures et les filigranes."
-        value={settings.minBlobArea}
-        min={0}
-        max={300}
-        step={4}
-        unit="px"
-        disabled={disabled}
-        onChange={(value) => update('minBlobArea', value)}
-      />
-
-      <div>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={settings.threshold === 'auto'}
-            disabled={disabled}
-            onChange={(event) => update('threshold', event.target.checked ? 'auto' : 128)}
-            className="accent-slate-900"
-          />
-          <span className="text-sm font-medium text-slate-800">Seuil automatique</span>
-        </label>
-        {settings.threshold === 'auto' ? (
-          <span className="text-xs text-slate-500">
-            Calculé par la méthode d&apos;Otsu, fiable sur un dessin au trait.
-          </span>
-        ) : (
+        <div className="mt-3 space-y-4">
           <Slider
-            label="Seuil"
-            hint="Sous cette luminosité, un pixel est considéré comme de l'encre."
-            value={settings.threshold}
-            min={1}
-            max={254}
+            label="Ébarbage"
+            hint="Supprime les barbules parasites des contours irréguliers."
+            value={settings.pruneSpursBelow}
+            min={0}
+            max={40}
+            unit="px"
             disabled={disabled}
-            onChange={(value) => update('threshold', value)}
+            onChange={(value) => update('pruneSpursBelow', value)}
           />
-        )}
-      </div>
+
+          <Slider
+            label="Taille minimale des taches"
+            hint="Ignore les petites salissures et les filigranes."
+            value={settings.minBlobArea}
+            min={0}
+            max={300}
+            step={4}
+            unit="px"
+            disabled={disabled}
+            onChange={(value) => update('minBlobArea', value)}
+          />
+
+          <div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={settings.threshold === 'auto'}
+                disabled={disabled}
+                onChange={(event) => update('threshold', event.target.checked ? 'auto' : 128)}
+                className="accent-sky-500"
+              />
+              <span className="text-sm font-medium text-slate-800">Seuil automatique</span>
+            </label>
+            {settings.threshold === 'auto' ? (
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Calculé par la méthode d&apos;Otsu, fiable sur un dessin au trait.
+              </span>
+            ) : (
+              <div className="mt-2">
+                <Slider
+                  label="Seuil"
+                  hint="Sous cette luminosité, un pixel est de l'encre."
+                  value={settings.threshold}
+                  min={1}
+                  max={254}
+                  disabled={disabled}
+                  onChange={(value) => update('threshold', value)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   )
 }

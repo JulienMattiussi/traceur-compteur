@@ -1,5 +1,17 @@
 @import 'tailwindcss';
 
+/*
+  Le fond est une trame de points : c'est le sujet même de l'application, et ça
+  suffit à sortir la page du gris uniforme sans rien lui disputer. Les cartes sont
+  opaques, elles la masquent là où on lit.
+*/
+body {
+  background-color: #f8fafc;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -11px -11px;
+}
+
 /* À l'impression, seul le puzzle doit rester : ni réglages, ni statistiques. */
 @media print {
   @page {
@@ -9,6 +21,8 @@
   html,
   body {
     background: #ffffff;
+    /* La trame de points parasiterait le dessin sur le papier. */
+    background-image: none;
   }
 
   /*
@@ -16,8 +30,11 @@
     que large dépasse de quelques millimètres et le navigateur ajoute une seconde
     page, vide. La marge de sécurité couvre les en-têtes et pieds de page que le
     navigateur ajoute de lui-même, en dehors de notre contrôle.
+
+    Ciblé sur la feuille du puzzle : les autres SVG de la page (la marque) ne
+    doivent pas être redimensionnés.
   */
-  #root svg {
+  .puzzle-sheet svg {
     display: block;
     margin: 0 auto;
     width: auto;

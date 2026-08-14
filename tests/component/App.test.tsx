@@ -33,6 +33,6 @@ describe('App', () => {
 
   it('laisse déposer un fichier par glisser-déposer', () => {
     render(<App />)
-    expect(screen.getByText(/Glisse un dessin au trait ici/)).toBeInTheDocument()
+    expect(screen.getByText(/Glisse un dessin au trait/)).toBeInTheDocument()
   })
 })

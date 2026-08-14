@@ -58,9 +58,11 @@ src/
 │   ├── settings.ts           # Réglages UI + conversion mm imprimés -> pixels
 │   └── image.ts             # Décodage via canvas + téléchargement (touche au DOM)
 ├── components/
+│   ├── Logo.tsx              # Marque : points reliés en pointillé, premier cerclé
 │   ├── Dropzone.tsx          # Dépôt de fichier (glisser ou parcourir)
 │   ├── Controls.tsx          # Curseurs de réglage
-│   ├── StatsPanel.tsx        # Mesures du dessin, du puzzle et de la qualité
+│   ├── Toolbar.tsx           # Deux groupes : Affichage et Exporter
+│   ├── StatsPanel.tsx        # Tuiles + mesures du dessin et de la qualité
 │   └── PuzzlePreview.tsx     # Aperçu, avec l'image source en surimpression
 ├── App.tsx                   # État, mémoïsation en deux étages, actions
 ├── main.tsx                  # Point d'entrée
@@ -248,6 +250,32 @@ injouable.
   n'a pas besoin de changer.
 
 ---
+
+## Parti pris d'interface
+
+- **La barre est en deux groupes étiquetés** : *Affichage* (vue du tracé,
+  surimpression) et *Exporter* (PDF, SVG, impression). Mélangés, il fallait relire
+  toute la barre pour trouver le bouton de sortie.
+- **La marque** reprend le vocabulaire du puzzle : des points reliés en pointillé,
+  le premier cerclé comme un début de séquence. Le trait d'union du titre est
+  lui-même une liaison pointillée ; le `h1` porte un `aria-label` pour que le nom
+  accessible reste `Traceur-compteur`.
+- **Le fond est une trame de points**, qui est le sujet même de l'application. Les
+  cartes sont opaques, donc rien ne gêne la lecture. Elle disparaît à l'impression.
+- **Les tuiles de mesures** utilisent des chiffres **proportionnels** : à cette
+  taille, `tabular-nums` donne à chaque chiffre la largeur d'un zéro et le nombre
+  paraît distendu. Le tabulaire est réservé aux colonnes qui s'alignent.
+- **Le voyant d'état** (numéros superposés) ne s'appuie jamais sur la couleur
+  seule : toujours un symbole et un libellé, avec un texte assez sombre pour rester
+  lisible sur fond clair.
+- **Les réglages d'extraction sont repliés** dans un `<details>` : utiles, mais
+  rarement touchés.
+
+### Voir l'interface pour de vrai
+Les tests de composant couvrent la structure, pas l'aspect. Pour regarder :
+piloter Chrome par CDP (`--remote-debugging-port`), pousser un fichier dans
+l'`input` via `DataTransfer`, puis `Page.captureScreenshot`. C'est le seul moyen
+de traverser le même chemin que l'utilisateur, décodage canvas compris.
 
 ## Contraintes techniques
 

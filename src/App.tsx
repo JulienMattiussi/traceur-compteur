@@ -1,19 +1,24 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { Controls } from '@/components/Controls'
 import { Dropzone } from '@/components/Dropzone'
+import { Logo, TitleLink } from '@/components/Logo'
 import { PuzzlePreview, type ViewMode } from '@/components/PuzzlePreview'
 import { StatsPanel } from '@/components/StatsPanel'
+import { Toolbar } from '@/components/Toolbar'
 import { download, loadGrayImage, type LoadedImage } from '@/lib/image'
+import { renderPdf } from '@/lib/pdf'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
 import { DEFAULT_SETTINGS, spacingInPixels, type Settings } from '@/lib/settings'
-import { renderPdf } from '@/lib/pdf'
 import { renderSvg } from '@/lib/svg'
 
-const VIEWS: { value: ViewMode; label: string }[] = [
-  { value: 'puzzle', label: 'Le puzzle' },
-  { value: 'both', label: 'Avec le tracé' },
-  { value: 'solution', label: 'La solution' },
-]
+function Card({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+      <h2 className="mb-3 text-sm font-semibold text-slate-900">{title}</h2>
+      {children}
+    </section>
+  )
+}
 
 export default function App() {
   const [image, setImage] = useState<LoadedImage | null>(null)
@@ -86,136 +91,88 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 print:min-h-0 print:bg-white">
-      <div className="mx-auto max-w-6xl p-6 print:p-0">
-        <header className="print:hidden">
-          <h1 className="text-2xl font-bold">Traceur-compteur</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            Un générateur de « relier les points » qui garde le tracé intérieur du dessin, et pas
-            seulement son contour. Tout se calcule dans le navigateur : ton image ne part nulle
-            part.
-          </p>
+    <div className="min-h-screen print:min-h-0">
+      <div className="mx-auto max-w-6xl px-6 py-8 print:p-0">
+        <header className="flex items-center gap-3.5 print:hidden">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200/70">
+            <Logo className="h-7 w-9 text-slate-900" />
+          </span>
+          <div>
+            {/*
+              Le trait d'union est remplacé par une liaison pointillée. Le nom
+              accessible reste entier grâce à `aria-label`.
+            */}
+            <h1
+              aria-label="Traceur-compteur"
+              className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-slate-900"
+            >
+              <span>Traceur</span>
+              <TitleLink />
+              <span>compteur</span>
+            </h1>
+            <p className="text-sm text-slate-600">
+              Le relier-les-points qui garde le tracé intérieur du dessin, pas seulement son
+              contour.
+            </p>
+          </div>
         </header>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[20rem_1fr] print:mt-0 print:gap-0">
-          <aside className="space-y-6 print:hidden">
+        <div className="mt-7 grid gap-6 lg:grid-cols-[21rem_1fr] print:mt-0 print:gap-0">
+          <aside className="space-y-4 print:hidden">
             <Dropzone onFile={handleFile} busy={busy} currentName={image?.name ?? null} />
 
             {error ? (
-              <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+              <p
+                role="alert"
+                className="rounded-lg bg-red-50 p-3 text-sm text-red-800 ring-1 ring-red-200"
+              >
                 {error}
               </p>
             ) : null}
 
             {image ? (
-              <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <Card title="Réglages">
                 <Controls settings={settings} onChange={setSettings} disabled={busy} />
-              </section>
+              </Card>
             ) : null}
 
             {puzzle ? (
-              <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <Card title="Mesures">
                 <StatsPanel puzzle={puzzle} />
-              </section>
+              </Card>
             ) : null}
           </aside>
 
           <main>
             {puzzle ? (
               <>
-                <div className="mb-3 flex flex-wrap items-center gap-2 print:hidden">
-                  <div className="flex overflow-hidden rounded-md border border-slate-300">
-                    {VIEWS.map((view) => (
-                      <button
-                        key={view.value}
-                        type="button"
-                        onClick={() => setMode(view.value)}
-                        aria-pressed={mode === view.value}
-                        className={`px-3 py-1.5 text-sm ${
-                          mode === view.value
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-white text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        {view.label}
-                      </button>
-                    ))}
+                <div className="puzzle-sheet overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/70 print:rounded-none print:shadow-none print:ring-0">
+                  <div className="border-b border-slate-200/70 bg-slate-50/70 px-4 py-3 print:hidden">
+                    <Toolbar
+                      mode={mode}
+                      onMode={setMode}
+                      overlay={overlay}
+                      onOverlay={setOverlay}
+                      overlayOpacity={overlayOpacity}
+                      onOverlayOpacity={setOverlayOpacity}
+                      onExportPdf={exportPdf}
+                      onExportSvg={exportSvg}
+                      onPrint={() => window.print()}
+                    />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={exportPdf}
-                    className="rounded-md border border-slate-900 bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700"
-                  >
-                    Télécharger le PDF
-                  </button>
-                  <button
-                    type="button"
-                    onClick={exportSvg}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-100"
-                  >
-                    Le SVG
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-100"
-                  >
-                    Imprimer
-                  </button>
-                </div>
-
-                {/*
-                  La surimpression a sa propre ligne, et la place du curseur y est
-                  réservée en permanence : sur la même ligne que les actions, son
-                  apparition faisait sauter les boutons suivants.
-                */}
-                <div className="mb-3 flex items-center gap-3 print:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setOverlay((value) => !value)}
-                    aria-pressed={overlay}
-                    className={`rounded-md border px-3 py-1.5 text-sm ${
-                      overlay
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    Image source
-                  </button>
-
-                  <label
-                    className={`flex items-center gap-2 text-sm text-slate-600 ${
-                      overlay ? '' : 'invisible'
-                    }`}
-                  >
-                    <input
-                      type="range"
-                      min={5}
-                      max={100}
-                      value={overlayOpacity}
-                      disabled={!overlay}
-                      onChange={(event) => setOverlayOpacity(Number(event.target.value))}
-                      aria-label="Opacité de l'image source"
-                      aria-hidden={!overlay}
-                      className="w-28 accent-slate-900"
+                  <div className="p-4 print:p-0">
+                    <PuzzlePreview
+                      puzzle={puzzle}
+                      mode={mode}
+                      overlayUrl={overlay ? (image?.sourceUrl ?? null) : null}
+                      overlayOpacity={overlayOpacity}
                     />
-                    {/* Largeur fixe : sinon passer de 9 % à 100 % décalerait le texte. */}
-                    <span className="w-11 tabular-nums">{overlayOpacity} %</span>
-                  </label>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-white p-2 print:border-0 print:p-0">
-                  <PuzzlePreview
-                    puzzle={puzzle}
-                    mode={mode}
-                    overlayUrl={overlay ? (image?.sourceUrl ?? null) : null}
-                    overlayOpacity={overlayOpacity}
-                  />
+                  </div>
                 </div>
 
                 {puzzle.sequences.length > 1 ? (
-                  <p className="mt-3 text-sm text-slate-600 print:hidden">
+                  <p className="mt-3 text-sm leading-relaxed text-slate-600 print:hidden">
                     Les numéros se suivent de 1 à {puzzle.stats.dots}. Un cercle autour d&apos;un
                     point signale qu&apos;il faut lever le crayon : le dessin compte{' '}
                     {puzzle.stats.sequences} tracés séparés, et c&apos;est le minimum atteignable
@@ -224,8 +181,11 @@ export default function App() {
                 ) : null}
               </>
             ) : (
-              <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-slate-300 text-sm text-slate-500">
-                {busy ? 'Analyse en cours...' : 'Choisis une image pour commencer.'}
+              <div className="flex h-72 flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-300 bg-white/60 text-center">
+                <Logo className="h-12 w-16 text-slate-300" />
+                <p className="text-sm text-slate-500">
+                  {busy ? 'Analyse en cours...' : 'Choisis une image pour commencer.'}
+                </p>
               </div>
             )}
           </main>

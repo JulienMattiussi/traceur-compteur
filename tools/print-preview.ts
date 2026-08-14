@@ -25,16 +25,17 @@ writeFileSync(
   `<!doctype html><meta charset="utf-8"><title>Traceur-compteur</title>
 <link rel="stylesheet" href="${process.cwd()}/dist/assets/${css}">
 <body><div id="root">
-<div class="min-h-screen bg-slate-50 text-slate-900 print:min-h-0 print:bg-white">
-  <div class="mx-auto max-w-6xl p-6 print:p-0">
+<div class="min-h-screen print:min-h-0">
+  <div class="mx-auto max-w-6xl px-6 py-8 print:p-0">
     <header class="print:hidden"><h1 class="text-2xl font-bold">Traceur-compteur</h1></header>
-    <div class="mt-6 grid gap-6 lg:grid-cols-[20rem_1fr] print:mt-0 print:gap-0">
-      <aside class="space-y-6 print:hidden"><section class="rounded-lg border p-4">reglages</section></aside>
+    <div class="mt-7 grid gap-6 lg:grid-cols-[21rem_1fr] print:mt-0 print:gap-0">
+      <aside class="space-y-4 print:hidden"><section class="rounded-xl bg-white p-4">reglages</section></aside>
       <main>
-        <div class="mb-3 flex flex-wrap items-center gap-2 print:hidden"><button>Imprimer</button></div>
-        <div class="mb-3 flex items-center gap-3 print:hidden"><button>Image source</button></div>
-        <div class="rounded-lg border border-slate-200 bg-white p-2 print:border-0 print:p-0">
-          <div class="relative"><div class="relative [&>svg]:h-auto [&>svg]:w-full">${renderSvg(puzzle)}</div></div>
+        <div class="puzzle-sheet overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200/70 print:rounded-none print:shadow-none print:ring-0">
+          <div class="border-b border-slate-200/70 bg-slate-50/70 px-4 py-3 print:hidden"><button>Imprimer</button></div>
+          <div class="p-4 print:p-0">
+            <div class="relative"><div class="relative [&>svg]:h-auto [&>svg]:w-full">${renderSvg(puzzle)}</div></div>
+          </div>
         </div>
         <p class="mt-3 text-sm text-slate-600 print:hidden">note</p>
       </main>

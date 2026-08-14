@@ -46,7 +46,10 @@ async function loadDrawing(): Promise<void> {
     screen.getByLabelText('Choisir une image'),
     new File(['x'], 'dessin.png', { type: 'image/png' }),
   )
-  await screen.findByRole('button', { name: 'Image source' })
+  // Délai large : ce test fait tourner le moteur pour de vrai (squelettisation,
+  // parcours, placement des numéros). Sur une machine chargée, la seconde par
+  // défaut ne suffit pas.
+  await screen.findByRole('button', { name: 'Image source' }, { timeout: 8000 })
 }
 
 describe('surimpression de l’image source', () => {
@@ -63,7 +66,7 @@ describe('surimpression de l’image source', () => {
     expect(screen.getByRole('button', { name: 'Le SVG' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Le puzzle' })).toBeInTheDocument()
     // Le panneau de mesures n'apparaît que si un puzzle a bien été produit.
-    expect(screen.getByRole('heading', { name: 'Le puzzle' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Mesures' })).toBeInTheDocument()
     expect(screen.getByText('Points')).toBeInTheDocument()
   })
 
@@ -78,6 +81,25 @@ describe('surimpression de l’image source', () => {
     expect(image).toHaveStyle({ opacity: '0.35' })
   })
 
+  it('sépare le choix du tracé des boutons de sortie', async () => {
+    await loadDrawing()
+
+    const display = screen.getByRole('group', { name: 'Affichage' })
+    const exports = screen.getByRole('group', { name: 'Exporter' })
+
+    expect(within(display).getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Le puzzle',
+      'Avec le tracé',
+      'La solution',
+      'Image source',
+    ])
+    expect(within(exports).getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Télécharger le PDF',
+      'Le SVG',
+      'Imprimer',
+    ])
+  })
+
   it('ne déplace aucun bouton quand le curseur apparaît', async () => {
     await loadDrawing()
 
@@ -86,32 +108,30 @@ describe('surimpression de l’image source', () => {
     const slider = screen.getByLabelText("Opacité de l'image source")
     expect(slider).toBeDisabled()
 
-    const toggle = screen.getByRole('button', { name: 'Image source' })
-    const actions = toggle.parentElement!.previousElementSibling as HTMLElement
-    const before = within(actions)
+    const display = screen.getByRole('group', { name: 'Affichage' })
+    const before = within(display)
       .getAllByRole('button')
       .map((button) => button.textContent)
 
-    await userEvent.click(toggle)
+    await userEvent.click(screen.getByRole('button', { name: 'Image source' }))
 
     expect(slider).toBeEnabled()
     expect(
-      within(actions)
+      within(display)
         .getAllByRole('button')
         .map((button) => button.textContent),
     ).toEqual(before)
-    // Et le curseur reste sur sa propre ligne, avec le bouton qui le commande.
-    expect(slider.closest('div')).toBe(toggle.parentElement)
+    // Le curseur vit dans le groupe d'affichage, jamais parmi les sorties.
+    expect(screen.getByRole('group', { name: 'Exporter' }).contains(slider)).toBe(false)
   })
 
-  it('propose le PDF en action principale', async () => {
+  it('propose le PDF en premier parmi les sorties', async () => {
     await loadDrawing()
 
     // Le PDF est la sortie recommandée : c'est la seule qui échappe aux en-têtes
     // et à l'échelle du dialogue d'impression.
-    const pdf = screen.getByRole('button', { name: 'Télécharger le PDF' })
-    const svg = screen.getByRole('button', { name: 'Le SVG' })
-    expect(pdf.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const exports = screen.getByRole('group', { name: 'Exporter' })
+    expect(within(exports).getAllByRole('button')[0]).toHaveTextContent('Télécharger le PDF')
   })
 
   it('libère l’URL de l’image remplacée', async () => {
