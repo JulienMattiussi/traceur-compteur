@@ -47,6 +47,9 @@ fixtures: ## Decode tools/fixtures/*.jpg to PGM (requires ffmpeg)
 bench: ## Run the engine on tools/fixtures and write SVG reports to out/
 	npm run bench
 
+print-preview: build ## Build a print-layout harness page (see AGENTS.md to check page count)
+	npm run print-preview -- lapin-dodo /tmp/print.html
+
 fix: format lint ## Format and lint all code
 
 check: build lint typecheck knip test ## Run all checks (build, lint, typecheck, knip, tests)

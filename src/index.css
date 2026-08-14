@@ -3,10 +3,26 @@
 /* À l'impression, seul le puzzle doit rester : ni réglages, ni statistiques. */
 @media print {
   @page {
-    margin: 10mm;
+    margin: 8mm;
   }
 
+  html,
   body {
     background: #ffffff;
+  }
+
+  /*
+    Le puzzle doit tenir sur UNE page. Sans borne de hauteur, un dessin plus haut
+    que large dépasse de quelques millimètres et le navigateur ajoute une seconde
+    page, vide. La marge de sécurité couvre les en-têtes et pieds de page que le
+    navigateur ajoute de lui-même, en dehors de notre contrôle.
+  */
+  #root svg {
+    display: block;
+    margin: 0 auto;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 88vh;
   }
 }

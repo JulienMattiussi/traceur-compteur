@@ -1,3 +1,5 @@
+import type { PlacedLabel } from '@/lib/labels'
+
 /** Types partagés par tout le pipeline. Aucune dépendance, aucun DOM. */
 
 export interface Point {
@@ -118,6 +120,10 @@ interface PuzzleStats extends GeometryStats {
   bridgeLength: number
   /** Paires de pastilles trop proches pour rester lisibles. */
   crowdedPairs: number
+  /** Numéros n'ayant trouvé aucune place libre autour de leur pastille. */
+  labelCollisions: number
+  /** Points retirés parce que leur numéro était incasable. */
+  removedForLabels: number
   /** Parcours écartés car trop courts, et longueur de dessin ainsi perdue. */
   droppedTrails: number
   droppedLength: number
@@ -129,5 +135,7 @@ export interface Puzzle {
   width: number
   height: number
   sequences: DotSequence[]
+  /** Position résolue de chaque numéro, dans l'ordre de la numérotation. */
+  labels: PlacedLabel[]
   stats: PuzzleStats
 }

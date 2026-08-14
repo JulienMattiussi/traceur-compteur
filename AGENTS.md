@@ -49,10 +49,12 @@ src/
 │   ├── bridge.ts             # Ponts entre sommets impairs : le levier des séquences
 │   ├── trails.ts             # Décomposition eulérienne minimale (Hierholzer)
 │   ├── simplify.ts           # RDP indexé, espacement, budget, écart exact
+│   ├── labels.ts             # Placement des numéros sans chevauchement
 │   ├── quality.ts            # Ambiguïtés et encombrement (index spatial)
 │   ├── baseline.ts           # Mesure ce qu'un contour extérieur perdrait
 │   ├── pipeline.ts           # analyse() puis buildPuzzle()
 │   ├── svg.ts                # Export SVG (puzzle, solution, fond transparent)
+│   ├── pdf.ts                # Export PDF A4 écrit à la main, sans dépendance
 │   ├── settings.ts           # Réglages UI + conversion mm imprimés -> pixels
 │   └── image.ts             # Décodage via canvas + téléchargement (touche au DOM)
 ├── components/
@@ -86,8 +88,9 @@ image
   └─4─ bridge      ponts courts entre sommets impairs   -> graphe plus pair
   └─5─ trails      décomposition eulérienne minimale    -> K séquences
   └─6─ placeDots   RDP + espacement + budget + 3 points -> points numérotés
-  └─7─ quality     ambiguïtés et encombrement           -> mesures
-  └─8─ svg         export imprimable
+  └─7─ labels      chaque numéro à une place libre       -> étiquettes posées
+  └─8─ quality     ambiguïtés et encombrement            -> mesures
+  └─9─ svg         export imprimable
 ```
 
 ### 3. Le graphe, et pourquoi il a besoin de trois nettoyages
@@ -149,7 +152,38 @@ dernier fragment appartiendraient au même parcours.
 
 `minimumTrailCount()` expose la borne, affichée dans l'UI à côté du résultat.
 
-### 6. Le budget de points est une cible, pas un plafond
+### 6. Ce qui doit être lisible, c'est le numéro, pas la pastille
+
+Deux points peuvent être très proches, c'est même utile pour suivre une courbe
+serrée. Ce qui rend un puzzle injouable, c'est deux **numéros** superposés. Le
+critère porte donc sur les rectangles de texte, pas sur la distance entre points.
+
+`placeLabels` essaie huit positions autour de chaque pastille (haut-droite
+d'abord, le placement classique) et retient la première qui ne recouvre ni une
+autre étiquette, ni une pastille voisine, **et qui tient dans la page** : un
+numéro qui dépasse du cadre est purement et simplement coupé à l'impression, donc
+un point collé au bord droit voit son numéro passer à sa gauche. Si vraiment
+aucune position ne convient, l'étiquette est au moins ramenée dans la page. Déplacer un numéro coûte infiniment
+moins cher que de supprimer un point. Ce n'est qu'en dernier recours, si les huit
+positions sont prises, que `dropUnplaceable` retire le point ; comme cela
+renumérote tout et change la largeur des étiquettes, le placement est repris
+(trois tentatives au plus).
+
+Les chiffres n'ont pas besoin d'être mesurés : en Helvetica ils ont tous la même
+avance, 0,556 em. `metricsForWidth` est la **seule** source des tailles, partagée
+par le placement et par le rendu, sinon les étiquettes seraient calculées à une
+taille et dessinées à une autre.
+
+Résultat : **zéro numéro superposé** sur les trois images de référence. Et comme
+la contrainte a changé de nature, les points peuvent se resserrer : l'espacement
+par défaut passe de 4 à 2,5 mm, ce qui améliore la fidélité de 2,31 à 1,29 mm.
+
+Un piège corrigé au passage : sur une **petite boucle**, la simplification ne
+retient que les deux extrémités, qui sont le *même* point du tracé. Y insérer le
+milieu fabriquait trois pastilles dont deux exactement confondues. Les trois
+points sont donc répartis sur le tour (`promoteToThreeDots`).
+
+### 7. Le budget de points est une cible, pas un plafond
 
 L'utilisateur demande « environ 400 points » et le moteur cherche par dichotomie
 la plus petite tolérance qui tienne dedans, en montant **ou en descendant**.
@@ -196,10 +230,12 @@ injouable.
   compte que de la distance : il ne cherche pas à continuer la direction du trait
   ni à éviter de traverser du blanc. C'est la première amélioration à faire.
 
-- **Encombrement local** : deux traits distincts qui passent à 2 mm l'un de
-  l'autre (le double trait d'une oreille) portent forcément des pastilles
-  proches. Aucun espacement ne le corrige, il faut moins de détail ou une page
-  plus grande. Suivi par `stats.crowdedPairs`.
+- **Le budget de points est compté avant** le retrait des numéros incasables : on
+  finit donc parfois sous la cible (219 points pour 250 demandés). Le curseur reste
+  un ordre de grandeur.
+- **`stats.crowdedPairs`** compte encore les pastilles rapprochées, mais ce n'est
+  plus un défaut : les numéros sont décalés. La mesure qui compte est
+  `labelCollisions`, qui doit rester à zéro.
 - **L'espacement aux virages** descend à `0,6 × minSpacing` pour préserver la
   forme, donc l'espacement minimal réel est inférieur au réglage.
 - **La contrainte d'espacement l'emporte sur la fidélité** : écarter deux
@@ -268,6 +304,43 @@ imprimable. Pour contrôler le rendu réel du SVG exporté :
 google-chrome --headless=new --no-sandbox --screenshot=/tmp/v.png \
   --window-size=760,1070 "file://$PWD/out/lapin-dodo-250-puzzle.svg"
 ```
+
+### Export PDF, la seule sortie maîtrisée
+Une page web **ne peut pas** empêcher le navigateur d'ajouter ses en-têtes, sa
+pagination et son échelle à l'impression : c'est un réglage du dialogue, hors de
+portée du document. D'où `pdf.ts`, qui écrit un PDF A4 directement, sans aucune
+bibliothèque : cercles en courbes de Bézier, texte en Helvetica (l'une des
+quatorze polices que tout lecteur possède, donc rien à embarquer), marges de
+10 mm cohérentes avec `PAGE_WIDTH_MM`.
+
+Les décalages de la table `xref` sont des positions d'octets **exactes**, ce que
+les tests vérifient en relisant le fichier produit. Tout étant en ASCII, un
+caractère vaut un octet, ce qui évite d'avoir à encoder.
+
+Pour contrôler le résultat :
+
+```sh
+make bench
+pdfinfo out/lapin-dodo-250-puzzle.pdf      # 1 page, A4
+pdftoppm -r 150 -png out/lapin-dodo-250-puzzle.pdf /tmp/page
+```
+
+### Mise en page d'impression
+Le puzzle doit tenir sur **une seule page**. Un dessin au format A4 dépassait de
+quelques millimètres et le navigateur ajoutait une seconde page vide, d'où la
+borne `max-height: 88vh` sur le SVG dans `index.css` (la marge couvre les
+en-têtes que le navigateur ajoute lui-même, hors de notre contrôle). Pour le
+vérifier :
+
+```sh
+make print-preview
+google-chrome --headless=new --no-sandbox --print-to-pdf-header-footer \
+  --print-to-pdf=/tmp/p.pdf "file:///tmp/print.html"
+pdfinfo /tmp/p.pdf | grep Pages     # doit afficher 1
+```
+
+La surimpression de l'image source est masquée à l'impression : le SVG y est mis
+à l'échelle, l'image ne suivrait plus.
 
 ### Images de test
 `tools/fixtures/*.jpg` est **hors git** (coloriages tiers, non redistribuables).

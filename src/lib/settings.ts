@@ -17,7 +17,11 @@ export function spacingInPixels(imageWidth: number, millimetres: number): number
 export interface Settings {
   /** Budget de points : le moteur ajuste la fidélité pour le tenir. */
   maxDots: number
-  /** Espacement minimal entre deux pastilles, en millimètres sur la page imprimée. */
+  /**
+   * Espacement minimal entre deux pastilles d'une même séquence, en millimètres
+   * imprimés. Ce n'est plus un réglage de lisibilité mais de densité : les numéros
+   * sont replacés automatiquement pour ne jamais se chevaucher.
+   */
   spacingMm: number
   /**
    * Longueur maximale, en millimètres imprimés, d'une liaison ajoutée entre deux
@@ -34,7 +38,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   maxDots: 400,
-  spacingMm: 4,
+  spacingMm: 2.5,
   bridgeMm: 8,
   pruneSpursBelow: 6,
   minBlobArea: 24,

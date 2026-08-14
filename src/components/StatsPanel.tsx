@@ -74,8 +74,18 @@ export function StatsPanel({ puzzle }: StatsPanelProps) {
 
       <h2 className="mb-2 mt-5 font-semibold text-slate-900">Qualité</h2>
       <Row
+        label="Numéros superposés"
+        hint="doit rester à zéro"
+        value={`${s.labelCollisions}`}
+      />
+      <Row
+        label="Points retirés"
+        hint="numéro impossible à caser"
+        value={s.removedForLabels === 0 ? 'aucun' : `${s.removedForLabels}`}
+      />
+      <Row
         label="Pastilles serrées"
-        hint="à surveiller si le nombre monte"
+        hint="sans gêne : les numéros sont décalés"
         value={`${s.crowdedPairs}`}
       />
       <Row

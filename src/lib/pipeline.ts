@@ -2,6 +2,7 @@ import { binarize, type BinarizeOptions } from '@/lib/binarize'
 import { classifyInterior, countInkComponents } from '@/lib/baseline'
 import { bridgeOddVertices } from '@/lib/bridge'
 import { buildGraph, type GraphOptions } from '@/lib/graph'
+import { dropUnplaceable, metricsFor, placeLabels } from '@/lib/labels'
 import { checkQuality } from '@/lib/quality'
 import { placeDots, type DotOptions } from '@/lib/simplify'
 import { thin } from '@/lib/thin'
@@ -146,11 +147,35 @@ export function buildPuzzle(
   timings.dots = now() - mark
 
   let running = 1
-  const sequences: DotSequence[] = placement.sequences.map((sequence) => {
+  let sequences: DotSequence[] = placement.sequences.map((sequence) => {
     const result: DotSequence = { ...sequence, firstNumber: running }
     running += sequence.dots.length
     return result
   })
+
+  // Les points peuvent être serrés, c'est même utile dans une courbe : ce qui
+  // rend un puzzle illisible, c'est deux numéros superposés. On les place donc
+  // autour de leur pastille, et on ne retire un point qu'en dernier recours,
+  // quand aucune des huit positions n'est libre. Retirer un point renumérote
+  // tout, donc change la largeur des étiquettes : d'où la reprise.
+  mark = now()
+  const metrics = metricsFor(width, height)
+  const before = sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
+  let labels = placeLabels(sequences, metrics)
+
+  for (let attempt = 0; attempt < 3 && labels.some((label) => !label.placed); attempt++) {
+    const reduced = dropUnplaceable(sequences, labels)
+    const remaining = reduced.reduce((total, sequence) => total + sequence.dots.length, 0)
+    const current = sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
+    // Plus rien à retirer : les numéros restants sont retenus par le plancher de
+    // trois points, insister boucherait à l'infini.
+    if (remaining === current) break
+    sequences = reduced
+    labels = placeLabels(sequences, metrics)
+  }
+  timings.labels = now() - mark
+
+  const dots = sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
 
   mark = now()
   const quality = checkQuality(sequences, width, settings.minSpacing)
@@ -160,9 +185,10 @@ export function buildPuzzle(
     width,
     height,
     sequences,
+    labels,
     stats: {
       ...analysis.geometry,
-      dots: sequences.reduce((total, sequence) => total + sequence.dots.length, 0),
+      dots,
       sequences: sequences.length,
       minSequences,
       bridges: bridged.bridges,
@@ -171,6 +197,8 @@ export function buildPuzzle(
       maxDeviation: placement.maxDeviation,
       minSpacing: quality.minSpacing,
       crowdedPairs: quality.crowdedPairs,
+      labelCollisions: labels.filter((label) => !label.placed).length,
+      removedForLabels: before - dots,
       droppedTrails: placement.droppedTrails,
       droppedLength: placement.droppedLength,
       ambiguities: quality.ambiguities,

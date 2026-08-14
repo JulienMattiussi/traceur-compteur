@@ -59,7 +59,8 @@ describe('surimpression de l’image source', () => {
   it('génère un puzzle et propose la surimpression', async () => {
     await loadDrawing()
 
-    expect(screen.getByRole('button', { name: 'Télécharger le SVG' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Télécharger le PDF' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Le SVG' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Le puzzle' })).toBeInTheDocument()
     // Le panneau de mesures n'apparaît que si un puzzle a bien été produit.
     expect(screen.getByRole('heading', { name: 'Le puzzle' })).toBeInTheDocument()
@@ -101,6 +102,16 @@ describe('surimpression de l’image source', () => {
     ).toEqual(before)
     // Et le curseur reste sur sa propre ligne, avec le bouton qui le commande.
     expect(slider.closest('div')).toBe(toggle.parentElement)
+  })
+
+  it('propose le PDF en action principale', async () => {
+    await loadDrawing()
+
+    // Le PDF est la sortie recommandée : c'est la seule qui échappe aux en-têtes
+    // et à l'échelle du dialogue d'impression.
+    const pdf = screen.getByRole('button', { name: 'Télécharger le PDF' })
+    const svg = screen.getByRole('button', { name: 'Le SVG' })
+    expect(pdf.compareDocumentPosition(svg) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('libère l’URL de l’image remplacée', async () => {

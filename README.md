@@ -52,15 +52,24 @@ make start      # http://localhost:1234
 ```
 
 Dépose un dessin au trait (coloriage, illustration, logo), règle le nombre de
-points et l'espacement, puis télécharge le SVG ou imprime.
+points et l'espacement, puis **télécharge le PDF**.
+
+Le PDF est la sortie recommandée : une page A4 exacte, à l'échelle prévue, sans
+l'en-tête ni la pagination que le navigateur ajoute à l'impression (une page web
+ne peut pas les désactiver, c'est un réglage du dialogue d'impression). Le SVG
+reste disponible pour retoucher le tracé dans un éditeur vectoriel.
 
 Le bouton **« Image source »** superpose le dessin d'origine au puzzle, avec un
 curseur d'opacité : pratique pour vérifier d'un coup d'oeil que les points
 suivent bien les traits.
 
-Le réglage qui marche : **environ 250 points par page A4, 4 mm d'espacement et
-8 mm de liaisons**. Au-delà de 250 points, la solution reste belle mais les
-numéros se chevauchent.
+Le réglage qui marche : **environ 250 points par page A4, 2,5 mm d'espacement et
+8 mm de liaisons**.
+
+Les points peuvent être très proches sans que ce soit un problème : chaque numéro
+est placé automatiquement à l'une des huit positions libres autour de sa
+pastille, de sorte qu'aucun ne chevauche un autre. Le panneau de mesures affiche
+« Numéros superposés », qui doit rester à zéro.
 
 ## Bien choisir son image
 

@@ -61,10 +61,10 @@ export function Controls({ settings, onChange, disabled }: ControlsProps) {
       />
 
       <Slider
-        label="Espacement des numéros"
-        hint="Place réservée à chaque numéro sur la page. Sous 3 mm, ils se chevauchent."
+        label="Espacement des points"
+        hint="Plus il est petit, plus le tracé est fidèle. Les numéros sont replacés tout seuls pour ne jamais se chevaucher."
         value={settings.spacingMm}
-        min={2}
+        min={1.5}
         max={10}
         step={0.5}
         unit="mm"

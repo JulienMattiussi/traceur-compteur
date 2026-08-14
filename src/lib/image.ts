@@ -58,8 +58,8 @@ export async function loadGrayImage(file: File, maxDimension = 1400): Promise<Lo
   }
 }
 
-/** Déclenche le téléchargement d'un fichier texte produit dans le navigateur. */
-export function downloadText(filename: string, content: string, type: string): void {
+/** Déclenche le téléchargement d'un fichier produit dans le navigateur. */
+export function download(filename: string, content: BlobPart, type: string): void {
   const url = URL.createObjectURL(new Blob([content], { type }))
   const link = document.createElement('a')
   link.href = url

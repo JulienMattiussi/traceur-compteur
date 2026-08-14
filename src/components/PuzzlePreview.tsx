@@ -34,7 +34,9 @@ export function PuzzlePreview({ puzzle, mode, overlayUrl, overlayOpacity }: Puzz
           alt="Image source en surimpression"
           // L'image et le SVG partagent le même rapport de forme, donc les caler
           // tous les deux sur la largeur suffit à les superposer exactement.
-          className="absolute inset-0 h-full w-full object-fill"
+          // Masquée à l'impression : le SVG y est redimensionné pour tenir sur la
+          // page, l'image ne suivrait plus.
+          className="absolute inset-0 h-full w-full object-fill print:hidden"
           style={{ opacity: overlayOpacity / 100 }}
         />
       ) : null}

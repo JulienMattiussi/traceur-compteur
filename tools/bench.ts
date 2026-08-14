@@ -3,6 +3,7 @@ import { basename, join } from 'node:path'
 import { bridgeOddVertices } from '@/lib/bridge'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
 import { PAGE_WIDTH_MM, spacingInPixels } from '@/lib/settings'
+import { renderPdf } from '@/lib/pdf'
 import { renderSvg } from '@/lib/svg'
 import type { Puzzle } from '@/lib/types'
 import { readPgm } from './pgm'
@@ -58,7 +59,7 @@ function main(): void {
     writePng(join(OUT, `${name}-0-squelette.png`), skeletonView)
 
     for (const maxDots of BUDGETS) {
-      const minSpacing = spacingInPixels(width, 4)
+      const minSpacing = spacingInPixels(width, 2.5)
       const puzzle = buildPuzzle(analysis, width, height, {
         maxDots,
         minSpacing,
@@ -80,17 +81,19 @@ function main(): void {
           `serres ${s.crowdedPairs}, ` +
           `perdu ${s.droppedTrails} traits (${((s.droppedLength / g.strokeLength) * 100).toFixed(1)} %), ` +
           `ambigus ${s.ambiguities.length}, ${totalMs.toFixed(0)} ms, ` +
-          `plus petite sequence ${Math.min(...puzzle.sequences.map((q) => q.dots.length))} points`,
+          `mini-seq ${Math.min(...puzzle.sequences.map((q) => q.dots.length))} pts, ` +
+          `numeros superposes ${s.labelCollisions}, retires ${s.removedForLabels}`,
       )
 
       writePng(join(OUT, `${name}-${maxDots}-solution.png`), renderSolution(puzzle))
       writePng(join(OUT, `${name}-${maxDots}-points.png`), renderDotsOnly(puzzle))
       writeFileSync(join(OUT, `${name}-${maxDots}-puzzle.svg`), renderSvg(puzzle))
+      writeFileSync(join(OUT, `${name}-${maxDots}-puzzle.pdf`), renderPdf(puzzle, { title: name }))
     }
 
     // Le pontage est le levier du nombre de séquences.
     for (const mm of [0, 2, 4, 6, 9, 12]) {
-      const minSpacing = spacingInPixels(width, 4)
+      const minSpacing = spacingInPixels(width, 2.5)
       const puzzle = buildPuzzle(analysis, width, height, {
         maxDots: 300,
         minSpacing,

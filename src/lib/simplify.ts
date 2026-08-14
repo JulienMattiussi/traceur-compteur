@@ -216,7 +216,7 @@ export function placeDots(trails: Trail[], options: DotOptions = {}): DotPlaceme
       const indices = enforceSpacingIndices(trail.points, simplified, minSpacing, trail.closed)
 
 
-      const usable = promoteToThreeDots(trail.points, indices, minSpacing)
+      const usable = promoteToThreeDots(trail.points, indices, minSpacing, trail.closed)
 
       // Une séquence de deux points n'est qu'un segment isolé : elle coûte un
       // lever de crayon et deux numéros pour presque rien. On préfère lui ajouter
@@ -286,23 +286,38 @@ function promoteToThreeDots(
   points: Point[],
   indices: number[],
   minSpacing: number,
+  closed: boolean,
 ): number[] | null {
   if (indices.length >= 3) return indices
   if (indices.length < 2) return null
+
+  const cornerSpacing = minSpacing * 0.6
+  const spread = (chosen: number[]): number[] | null => {
+    for (let i = 1; i < chosen.length; i++) {
+      const previous = points[chosen[i - 1]!]!
+      const current = points[chosen[i]!]!
+      if (Math.hypot(current.x - previous.x, current.y - previous.y) < cornerSpacing) return null
+    }
+    return chosen
+  }
+
+  // Sur une boucle, les deux extrémités retenues sont le **même** point du tracé.
+  // Y insérer le milieu donnerait trois pastilles dont deux exactement
+  // superposées, donc deux numéros au même endroit. On répartit donc sur le tour.
+  if (closed) {
+    const third = Math.floor(points.length / 3)
+    if (third < 1) return null
+    const candidates = [0, third, 2 * third]
+    if (new Set(candidates).size < 3) return null
+    return spread(candidates)
+  }
 
   const first = indices[0]!
   const last = indices[1]!
   const middle = Math.floor((first + last) / 2)
   if (middle === first || middle === last) return null
 
-  const cornerSpacing = minSpacing * 0.6
-  const a = points[first]!
-  const b = points[middle]!
-  const c = points[last]!
-  if (Math.hypot(b.x - a.x, b.y - a.y) < cornerSpacing) return null
-  if (Math.hypot(c.x - b.x, c.y - b.y) < cornerSpacing) return null
-
-  return [first, middle, last]
+  return spread([first, middle, last])
 }
 
 /** Longueur de la ligne brisée reliant les pastilles, fermeture comprise. */

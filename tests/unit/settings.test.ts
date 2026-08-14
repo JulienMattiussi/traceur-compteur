@@ -20,7 +20,8 @@ describe('spacingInPixels', () => {
 })
 
 describe('DEFAULT_SETTINGS', () => {
-  it('réserve assez de place pour un numéro à trois chiffres', () => {
-    expect(DEFAULT_SETTINGS.spacingMm).toBeGreaterThanOrEqual(3)
+  it('laisse les points se rapprocher, la lisibilité venant du placement des numéros', () => {
+    expect(DEFAULT_SETTINGS.spacingMm).toBeGreaterThan(0)
+    expect(DEFAULT_SETTINGS.spacingMm).toBeLessThan(4)
   })
 })

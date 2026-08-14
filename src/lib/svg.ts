@@ -1,11 +1,7 @@
-import { PAGE_WIDTH_MM } from '@/lib/settings'
+import { baselineOf, metricsFor } from '@/lib/labels'
 import type { Puzzle } from '@/lib/types'
 
 export interface SvgOptions {
-  /** Rayon des pastilles. */
-  dotRadius?: number
-  /** Taille des numéros. */
-  fontSize?: number
   /** Affiche le tracé solution en fond, pour vérifier le rendu. */
   showSolution?: boolean
   /** Colore chaque séquence différemment (lecture du découpage). */
@@ -41,13 +37,10 @@ const PALETTE = [
 export function renderSvg(puzzle: Puzzle, options: SvgOptions = {}): string {
   const { width, height, sequences } = puzzle
 
-  // Pastilles et numéros sont dimensionnés en millimètres imprimés puis convertis
-  // en pixels de l'image : le rendu reste identique quelle que soit la résolution
-  // de l'image d'entrée.
-  const pixelsPerMm = width / PAGE_WIDTH_MM
+  // Mêmes métriques que celles utilisées pour placer les étiquettes, sinon les
+  // numéros seraient positionnés à une taille et dessinés à une autre.
+  const { dotRadius, fontSize } = metricsFor(width, height)
   const {
-    dotRadius = 0.55 * pixelsPerMm,
-    fontSize = 2.4 * pixelsPerMm,
     showSolution = false,
     colorBySequence = false,
     solutionOnly = false,
@@ -91,9 +84,13 @@ export function renderSvg(puzzle: Puzzle, options: SvgOptions = {}): string {
         parts.push(
           `<circle cx="${round(dot.x)}" cy="${round(dot.y)}" r="${dotRadius}" fill="${colour}"/>`,
         )
-        parts.push(
-          `<text x="${round(dot.x + dotRadius + 1.5)}" y="${round(dot.y - dotRadius - 0.5)}" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" fill="${colour}">${number}</text>`,
-        )
+
+        const label = puzzle.labels[number - 1]
+        if (label) {
+          parts.push(
+            `<text x="${round(label.x)}" y="${round(baselineOf(label))}" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" fill="${colour}">${number}</text>`,
+          )
+        }
       }
     }
   }

@@ -147,6 +147,42 @@ describe('placeDots', () => {
     expect(placement.sequences[0]!.dots[1]!.x).toBeCloseTo(99, 0)
   })
 
+  it('ne superpose jamais deux points sur une petite boucle', () => {
+    // Une boucle dont les deux extrémités retenues sont le même point du tracé :
+    // y insérer le milieu donnerait deux pastilles exactement confondues, donc
+    // deux numéros au même endroit.
+    const radius = 6
+    const loop: Point[] = Array.from({ length: 60 }, (_, i) => ({
+      x: 100 + radius * Math.cos((2 * Math.PI * i) / 59),
+      y: 100 + radius * Math.sin((2 * Math.PI * i) / 59),
+    }))
+    const placement = placeDots([asTrail(loop, true)], {
+      tolerance: 40,
+      minSpacing: 7,
+      minTrailLength: 0,
+    })
+
+    for (const sequence of placement.sequences) {
+      expect(sequence.dots.length).toBeGreaterThanOrEqual(3)
+      for (let i = 0; i < sequence.dots.length; i++) {
+        for (let j = i + 1; j < sequence.dots.length; j++) {
+          const a = sequence.dots[i]!
+          const b = sequence.dots[j]!
+          expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeGreaterThan(1)
+        }
+      }
+    }
+  })
+
+  it('écarte une boucle trop petite pour trois points distincts', () => {
+    const loop: Point[] = Array.from({ length: 12 }, (_, i) => ({
+      x: 100 + 1.5 * Math.cos((2 * Math.PI * i) / 11),
+      y: 100 + 1.5 * Math.sin((2 * Math.PI * i) / 11),
+    }))
+    const placement = placeDots([asTrail(loop, true)], { minSpacing: 7, minTrailLength: 0 })
+    expect(placement.sequences).toHaveLength(0)
+  })
+
   it('écarte un segment trop court pour porter trois points', () => {
     const placement = placeDots([asTrail(straight(6))], { minSpacing: 7, minTrailLength: 0 })
     expect(placement.sequences).toHaveLength(0)
