@@ -1,5 +1,3 @@
-import type { PlacedLabel } from '@/lib/labels'
-
 /** Types partagés par tout le pipeline. Aucune dépendance, aucun DOM. */
 
 export interface Point {
@@ -129,6 +127,29 @@ interface PuzzleStats extends GeometryStats {
   droppedLength: number
   ambiguities: Ambiguity[]
   timings: Record<string, number>
+}
+
+/** Ce qu'il faut pour dimensionner une étiquette et la tenir dans la page. */
+export interface LabelMetrics {
+  /** Hauteur de la police, en pixels de l'image. */
+  fontSize: number
+  /** Rayon de la pastille : l'étiquette ne doit pas la recouvrir. */
+  dotRadius: number
+  /** Dimensions de l'image : une étiquette ne doit pas déborder de la page. */
+  canvasWidth: number
+  canvasHeight: number
+}
+
+/** Étiquette résolue : où écrire le numéro, et si on a réussi à le caser. */
+export interface PlacedLabel {
+  number: number
+  /** Coin haut-gauche du rectangle occupé par le texte. */
+  x: number
+  y: number
+  width: number
+  height: number
+  /** Faux si aucune position libre n'a été trouvée autour de la pastille. */
+  placed: boolean
 }
 
 export interface Puzzle {

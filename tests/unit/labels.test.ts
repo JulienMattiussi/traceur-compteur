@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { baselineOf, dropUnplaceable, labelSize, metricsFor, placeLabels } from '@/lib/labels'
+import { baselineOf, dropUnplaceable, labelSize, placeLabels, resolveLabels } from '@/lib/labels'
 import type { DotSequence, PlacedLabel } from '@/lib/types'
 import type { Point } from '@/lib/types'
 
@@ -111,20 +111,6 @@ describe('baselineOf', () => {
   })
 })
 
-describe('metricsFor', () => {
-  it('grandit avec la résolution, pour un rendu imprimé constant', () => {
-    const small = metricsFor(700, 900)
-    const large = metricsFor(2100, 2700)
-    expect(large.fontSize).toBeCloseTo(3 * small.fontSize)
-    expect(large.dotRadius).toBeCloseTo(3 * small.dotRadius)
-  })
-
-  it('retient les dimensions de l’image pour borner les étiquettes', () => {
-    expect(metricsFor(700, 900).canvasWidth).toBe(700)
-    expect(metricsFor(700, 900).canvasHeight).toBe(900)
-  })
-})
-
 describe('bornage au cadre', () => {
   it('ne laisse aucune étiquette dépasser de l’image', () => {
     // Des points collés aux quatre bords et aux quatre coins.
@@ -194,5 +180,63 @@ describe('dropUnplaceable', () => {
     const sequences = [sequence([[0, 0], [30, 0], [60, 0]])]
     const labels = placeLabels(sequences, METRICS)
     expect(dropUnplaceable(sequences, labels)).toBe(sequences)
+  })
+})
+
+describe('resolveLabels', () => {
+  it('ne touche à rien quand tous les numéros tiennent', () => {
+    const sequences = [
+      sequence([
+        [20, 20],
+        [80, 20],
+        [140, 20],
+      ]),
+    ]
+    const resolved = resolveLabels(sequences, METRICS)
+
+    expect(resolved.removed).toBe(0)
+    expect(resolved.sequences).toBe(sequences)
+    expect(resolved.labels.every((label) => label.placed)).toBe(true)
+  })
+
+  it('retire les points incasables puis renumérote', () => {
+    // Une grappe dense au même endroit : certains numéros n'auront aucune place.
+    const dots: [number, number][] = Array.from({ length: 30 }, (_, i) => [
+      100 + (i % 5),
+      100 + Math.floor(i / 5),
+    ])
+    const resolved = resolveLabels([sequence(dots)], METRICS)
+
+    expect(resolved.removed).toBeGreaterThan(0)
+    // La numérotation reste continue après le retrait.
+    expect(resolved.labels.map((label) => label.number)).toEqual(
+      resolved.labels.map((_, index) => index + 1),
+    )
+  })
+
+  it('s’arrête au lieu de boucler quand plus rien n’est retirable', () => {
+    // Trois points confondus : le plancher de trois points interdit tout retrait.
+    const stuck = [
+      sequence([
+        [100, 100],
+        [100, 100],
+        [100, 100],
+      ]),
+    ]
+    const resolved = resolveLabels(stuck, METRICS)
+
+    expect(resolved.sequences[0]!.dots).toHaveLength(3)
+    expect(resolved.removed).toBe(0)
+  })
+
+  it('respecte le nombre de reprises demandé', () => {
+    const dots: [number, number][] = Array.from({ length: 30 }, (_, i) => [
+      100 + (i % 5),
+      100 + Math.floor(i / 5),
+    ])
+    const once = resolveLabels([sequence(dots)], METRICS, 1)
+    const thrice = resolveLabels([sequence(dots)], METRICS, 3)
+
+    expect(thrice.removed).toBeGreaterThanOrEqual(once.removed)
   })
 })

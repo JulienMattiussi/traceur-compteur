@@ -1,10 +1,11 @@
 import { binarize, type BinarizeOptions } from '@/lib/binarize'
-import { classifyInterior, countInkComponents } from '@/lib/baseline'
+import { classifyInterior, countInkComponents } from '@/lib/interior'
 import { bridgeOddVertices } from '@/lib/bridge'
 import { buildGraph, type GraphOptions } from '@/lib/graph'
-import { dropUnplaceable, metricsFor, placeLabels } from '@/lib/labels'
+import { resolveLabels } from '@/lib/labels'
+import { metricsFor } from '@/lib/page'
 import { checkQuality } from '@/lib/quality'
-import { placeDots, type DotOptions } from '@/lib/simplify'
+import { placeDots, type DotOptions } from '@/lib/dots'
 import { thin } from '@/lib/thin'
 import { decomposeTrails, minimumTrailCount } from '@/lib/trails'
 import type { DotSequence, GeometryStats, Mask, Puzzle, SkeletonGraph } from '@/lib/types'
@@ -146,6 +147,8 @@ export function buildPuzzle(
   const placement = placeDots(trails, settings)
   timings.dots = now() - mark
 
+  // Numérotation continue sur tout le puzzle : `resolveLabels` s'appuie dessus
+  // pour connaître la largeur de chaque étiquette.
   let running = 1
   let sequences: DotSequence[] = placement.sequences.map((sequence) => {
     const result: DotSequence = { ...sequence, firstNumber: running }
@@ -155,24 +158,11 @@ export function buildPuzzle(
 
   // Les points peuvent être serrés, c'est même utile dans une courbe : ce qui
   // rend un puzzle illisible, c'est deux numéros superposés. On les place donc
-  // autour de leur pastille, et on ne retire un point qu'en dernier recours,
-  // quand aucune des huit positions n'est libre. Retirer un point renumérote
-  // tout, donc change la largeur des étiquettes : d'où la reprise.
+  // autour de leur pastille, et on ne retire un point qu'en dernier recours.
   mark = now()
-  const metrics = metricsFor(width, height)
-  const before = sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
-  let labels = placeLabels(sequences, metrics)
-
-  for (let attempt = 0; attempt < 3 && labels.some((label) => !label.placed); attempt++) {
-    const reduced = dropUnplaceable(sequences, labels)
-    const remaining = reduced.reduce((total, sequence) => total + sequence.dots.length, 0)
-    const current = sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
-    // Plus rien à retirer : les numéros restants sont retenus par le plancher de
-    // trois points, insister boucherait à l'infini.
-    if (remaining === current) break
-    sequences = reduced
-    labels = placeLabels(sequences, metrics)
-  }
+  const resolved = resolveLabels(sequences, metricsFor(width, height))
+  sequences = resolved.sequences
+  const labels = resolved.labels
   timings.labels = now() - mark
 
   const dots = sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
@@ -198,7 +188,7 @@ export function buildPuzzle(
       minSpacing: quality.minSpacing,
       crowdedPairs: quality.crowdedPairs,
       labelCollisions: labels.filter((label) => !label.placed).length,
-      removedForLabels: before - dots,
+      removedForLabels: resolved.removed,
       droppedTrails: placement.droppedTrails,
       droppedLength: placement.droppedLength,
       ambiguities: quality.ambiguities,

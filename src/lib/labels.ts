@@ -1,27 +1,4 @@
-import { PAGE_WIDTH_MM } from '@/lib/settings'
-import type { DotSequence, Point } from '@/lib/types'
-
-export interface LabelMetrics {
-  /** Hauteur de la police, en pixels de l'image. */
-  fontSize: number
-  /** Rayon de la pastille : l'étiquette ne doit pas la recouvrir. */
-  dotRadius: number
-  /** Dimensions de l'image : une étiquette ne doit pas déborder de la page. */
-  canvasWidth: number
-  canvasHeight: number
-}
-
-/** Étiquette résolue : où écrire le numéro, et si on a réussi à le caser. */
-export interface PlacedLabel {
-  number: number
-  /** Coin haut-gauche du rectangle occupé par le texte. */
-  x: number
-  y: number
-  width: number
-  height: number
-  /** Faux si aucune position libre n'a été trouvée autour de la pastille. */
-  placed: boolean
-}
+import type { DotSequence, LabelMetrics, PlacedLabel, Point } from '@/lib/types'
 
 /**
  * Chiffres en Helvetica : tous la même avance, 0,556 em. Pas besoin de mesurer le
@@ -164,20 +141,6 @@ export function placeLabels(sequences: DotSequence[], metrics: LabelMetrics): Pl
   return placed
 }
 
-/**
- * Métriques dérivées de la largeur de l'image, exprimées en millimètres
- * imprimés. Une seule source pour le rendu et pour le placement : sinon les
- * étiquettes seraient calculées à une taille et dessinées à une autre.
- */
-export function metricsFor(width: number, height: number): LabelMetrics {
-  const pixelsPerMm = width / PAGE_WIDTH_MM
-  return {
-    dotRadius: 0.55 * pixelsPerMm,
-    fontSize: 2.4 * pixelsPerMm,
-    canvasWidth: width,
-    canvasHeight: height,
-  }
-}
 
 /**
  * Retire les points dont le numéro n'a trouvé aucune place, puis renumérote. Une
@@ -212,4 +175,46 @@ export function dropUnplaceable(
 
 function clamp(value: number, low: number, high: number): number {
   return Math.max(low, Math.min(high, value))
+}
+
+export interface ResolvedLabels {
+  sequences: DotSequence[]
+  labels: PlacedLabel[]
+  /** Points retirés parce que leur numéro ne tenait nulle part. */
+  removed: number
+}
+
+/**
+ * Place tous les numéros, quitte à retirer les points dont l'étiquette ne rentre
+ * nulle part, puis recommence.
+ *
+ * La reprise est nécessaire : retirer un point renumérote tout ce qui suit, donc
+ * change la largeur des étiquettes, donc peut libérer ou reprendre de la place.
+ * Trois passes suffisent en pratique et bornent le travail.
+ */
+export function resolveLabels(
+  sequences: DotSequence[],
+  metrics: LabelMetrics,
+  maxAttempts = 3,
+): ResolvedLabels {
+  const countDots = (list: DotSequence[]): number =>
+    list.reduce((total, sequence) => total + sequence.dots.length, 0)
+
+  const before = countDots(sequences)
+  let current = sequences
+  let labels = placeLabels(current, metrics)
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (labels.every((label) => label.placed)) break
+
+    const reduced = dropUnplaceable(current, labels)
+    // Plus rien à retirer : les numéros restants sont retenus par le plancher de
+    // trois points, insister boucherait à l'infini.
+    if (countDots(reduced) === countDots(current)) break
+
+    current = reduced
+    labels = placeLabels(current, metrics)
+  }
+
+  return { sequences: current, labels, removed: before - countDots(current) }
 }

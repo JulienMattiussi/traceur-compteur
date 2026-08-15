@@ -41,22 +41,27 @@ navigateur décode l'image via `canvas`, tout le reste est du TypeScript.
 
 ```
 src/
-├── lib/                      # Logique pure, zéro React (entièrement testée)
-│   ├── types.ts              # Mask, GraphNode, GraphEdge, Trail, Puzzle, stats
+├── lib/                      # Logique pure : aucun React, aucun DOM
+│   ├── types.ts              # Feuille de l'arbre de dépendances : aucun import
+│   ├── page.ts               # Géométrie de la page A4 (mm imprimés -> pixels)
+│   ├── settings.ts           # Réglages exposés à l'interface
 │   ├── binarize.ts           # Otsu + seuillage + despeckle + rgbaToGray
 │   ├── thin.ts               # Squelettisation Zhang-Suen
-│   ├── graph.ts              # Squelette -> graphe, et ses trois nettoyages
-│   ├── bridge.ts             # Ponts entre sommets impairs : le levier des séquences
-│   ├── trails.ts             # Décomposition eulérienne minimale (Hierholzer)
-│   ├── simplify.ts           # RDP indexé, espacement, budget, écart exact
+│   ├── graph.ts              # Squelette -> graphe (sommets, arêtes, chaînes)
+│   ├── graph-cleanup.ts      # Barbules, micro-boucles, faux sommets de degré 2
+│   ├── bridge.ts             # Ponts entre sommets impairs : levier des séquences
+│   ├── euler.ts              # Circuit de Hierholzer et coupure aux arêtes virtuelles
+│   ├── trails.ts             # Décomposition en séquences minimales et leur ordre
+│   ├── simplify.ts           # Géométrie pure : distance, RDP, écart exact
+│   ├── dots.ts               # Placement des pastilles : budget, espacement, plancher
 │   ├── labels.ts             # Placement des numéros sans chevauchement
 │   ├── quality.ts            # Ambiguïtés et encombrement (index spatial)
-│   ├── baseline.ts           # Mesure ce qu'un contour extérieur perdrait
+│   ├── interior.ts           # Mesure ce qu'un contour extérieur perdrait
 │   ├── pipeline.ts           # analyse() puis buildPuzzle()
 │   ├── svg.ts                # Export SVG (puzzle, solution, fond transparent)
-│   ├── pdf.ts                # Export PDF A4 écrit à la main, sans dépendance
-│   ├── settings.ts           # Réglages UI + conversion mm imprimés -> pixels
-│   └── image.ts             # Décodage via canvas + téléchargement (touche au DOM)
+│   └── pdf.ts                # Export PDF A4 écrit à la main, sans dépendance
+├── platform/
+│   └── image.ts              # Frontière navigateur : décodage canvas, téléchargement
 ├── components/
 │   ├── Logo.tsx              # Marque : points reliés en pointillé, premier cerclé
 │   ├── Dropzone.tsx          # Dépôt de fichier (glisser ou parcourir)
@@ -66,17 +71,30 @@ src/
 │   └── PuzzlePreview.tsx     # Aperçu, avec l'image source en surimpression
 ├── App.tsx                   # État, mémoïsation en deux étages, actions
 ├── main.tsx                  # Point d'entrée
-└── index.css                 # Import Tailwind + styles d'impression
+└── index.css                 # Import Tailwind, trame de fond, styles d'impression
 tools/                        # Harnais de mesure, tourne sous Node (pas livré)
 ├── pgm.ts                    # Lecture PGM binaire (P5)
 ├── raster.ts                 # Rasteriseur minimal + écriture PNG via ffmpeg
-├── bench.ts                  # Mesure et rend les 3 images de référence
+├── bench.ts                  # Mesure et rend les images de référence
+├── print-preview.ts          # Page de contrôle de la mise en page d'impression
 └── fixtures/                 # Images de test (hors git, voir plus bas)
 tests/
 ├── fixtures.ts               # Dessins synthétiques (trait, rectangle, cercle)
-├── unit/                     # Vitest sur src/lib
+├── unit/                     # Vitest sur src/lib et src/platform
 └── component/                # Vitest + Testing Library sur App
 ```
+
+### Règles d'architecture
+
+- **`src/lib` ne connaît ni React ni le DOM.** Tout ce qui dépend du navigateur
+  vit dans `src/platform`. C'est ce qui permet de tester le moteur entier sans
+  navigateur, et de le faire tourner tel quel sous Node dans `tools/`.
+- **`types.ts` est une feuille** : il n'importe rien. Les types d'étiquettes y
+  vivent aussi, sinon `types.ts` et `labels.ts` s'importaient mutuellement.
+- **`page.ts` est la seule source des tailles.** Le placement des étiquettes et
+  leur rendu en dérivent tous les deux ; les séparer les aurait fait diverger.
+- **Viser moins de 300 lignes par fichier.** `graph.ts` et `simplify.ts` avaient
+  dépassé, d'où les découpes en `graph-cleanup.ts`, `dots.ts` et `euler.ts`.
 
 ---
 

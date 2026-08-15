@@ -2,7 +2,7 @@
 // CSS réellement construit, pour vérifier au navigateur combien de pages sortent.
 import { readdirSync, writeFileSync } from 'node:fs'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
-import { spacingInPixels } from '@/lib/settings'
+import { spacingInPixels } from '@/lib/page'
 import { renderSvg } from '@/lib/svg'
 import { readPgm } from './pgm'
 

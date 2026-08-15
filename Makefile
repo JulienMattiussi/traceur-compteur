@@ -50,6 +50,9 @@ bench: ## Run the engine on tools/fixtures and write SVG reports to out/
 print-preview: build ## Build a print-layout harness page (see AGENTS.md to check page count)
 	npm run print-preview -- lapin-dodo /tmp/print.html
 
+og: ## Regenerate the social share image (requires google-chrome)
+	npm run og
+
 fix: format lint ## Format and lint all code
 
 check: build lint typecheck knip test ## Run all checks (build, lint, typecheck, knip, tests)

@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  deviationByIndices,
-  distanceToSegment,
-  enforceSpacing,
-  placeDots,
-  simplify,
-  simplifyIndices,
-} from '@/lib/simplify'
+import { enforceSpacing, placeDots } from '@/lib/dots'
+import { deviationByIndices, distanceToSegment, simplify, simplifyIndices } from '@/lib/simplify'
 import type { Point, Trail } from '@/lib/types'
 
 function straight(count: number, step = 1): Point[] {

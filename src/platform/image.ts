@@ -1,5 +1,11 @@
 import { rgbaToGray } from '@/lib/binarize'
 
+/**
+ * Tout ce qui dépend du navigateur. `src/lib` reste de la logique pure et
+ * testable sans DOM ; ce module est la frontière, et la seule chose qui empêche
+ * le moteur de tourner tel quel sous Node.
+ */
+
 export interface LoadedImage {
   name: string
   width: number

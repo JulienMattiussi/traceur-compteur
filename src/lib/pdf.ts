@@ -1,4 +1,5 @@
-import { baselineOf, metricsFor } from '@/lib/labels'
+import { baselineOf } from '@/lib/labels'
+import { metricsFor } from '@/lib/page'
 import type { Puzzle } from '@/lib/types'
 
 export interface PdfOptions {

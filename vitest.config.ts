@@ -17,7 +17,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['src/lib/**'],
+      include: ['src/lib/**', 'src/platform/**'],
+      // Sans ça, les fichiers entièrement couverts disparaissent du tableau et
+      // on croit à tort qu'ils ne sont pas testés.
+      skipFull: false,
     },
   },
 })

@@ -1,6 +1,12 @@
 import type { Mask } from '@/lib/types'
 
 /**
+ * Distingue ce qui borde la silhouette de ce qui n'existe qu'à l'intérieur du
+ * dessin, c'est-à-dire exactement la part qu'un générateur par contour extérieur
+ * ne peut pas représenter. Sert à la mesurer, pas à la produire.
+ */
+
+/**
  * Transformée de distance par chamfer 3-4 en deux passes. Approximation de la
  * distance euclidienne à ~2 % près, largement suffisante ici et linéaire.
  */

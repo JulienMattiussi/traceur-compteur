@@ -1,4 +1,4 @@
-import { PAGE_WIDTH_MM } from '@/lib/settings'
+import { PAGE_WIDTH_MM } from '@/lib/page'
 import type { Puzzle } from '@/lib/types'
 
 interface StatsPanelProps {

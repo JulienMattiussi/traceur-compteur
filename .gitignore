@@ -17,6 +17,7 @@ coverage/
 
 # Sorties du harnais de mesure
 out/
+# public/og.png est volontairement versionné : il sert de miniature au README
 
 # Images de test (coloriages tiers, non redistribuables) et leur décodage
 tools/fixtures/*.jpg

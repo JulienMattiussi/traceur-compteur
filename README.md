@@ -1,48 +1,62 @@
-# traceur-compteur
+<div align="center">
 
-Transforme un dessin au trait en **« relier les points »**, en gardant le tracé
-intérieur du dessin et pas seulement sa silhouette.
+![Traceur-compteur](public/og.png)
 
-Tout se calcule dans le navigateur : ton image ne part sur aucun serveur.
+# Traceur-compteur
+
+**Le relier-les-points qui garde le tracé intérieur du dessin, pas seulement son contour.**
+
+[![Licence MIT](https://img.shields.io/badge/licence-MIT-0f172a)](LICENSE)
+[![100 % front-end](https://img.shields.io/badge/100%25-front--end-38bdf8)](#pourquoi-tout-tient-dans-le-navigateur)
+[![Dépendances de calcul : aucune](https://img.shields.io/badge/d%C3%A9pendances%20de%20calcul-aucune-16a34a)](#pourquoi-tout-tient-dans-le-navigateur)
+
+</div>
+
+---
 
 ## Le problème
 
-Les générateurs de relier-les-points existants ne renvoient que le **contour
-extérieur**. Sur un coloriage de lapin, ça veut dire perdre l'oeil, le museau,
-les moustaches, l'intérieur des oreilles et les pattes : mesuré ici, **38 à 69 %
-de la longueur du dessin**.
+Tous les générateurs de relier-les-points existants font la même chose : ils
+extraient le **contour extérieur** et jettent tout le reste. Sur un coloriage de
+lapin, ça veut dire perdre l'oeil, le museau, les moustaches, l'intérieur des
+oreilles et les pattes.
 
-Ce n'est pas un oubli, c'est une contrainte de format. Un contour extérieur est
-une boucle fermée, donc une seule séquence `1 → N`. En gardant l'intérieur, le
-dessin devient un graphe avec des embranchements, et le théorème d'Euler
-interdit de le parcourir d'un seul trait.
+Mesuré sur trois coloriages : **38 à 69 % de la longueur du dessin** part à la
+poubelle. Là où un `findContours(RETR_EXTERNAL)` renvoie 10 à 33 boucles fermées
+avec **zéro jonction**, ce moteur extrait 171 à 431 traits et jusqu'à 174
+jonctions.
 
-## La réponse
+## Pourquoi ce n'est pas un défaut de qualité, mais de format
 
-Plusieurs séquences numérotées, en **nombre minimal démontré** (la borne
-d'Euler, affichée à côté du résultat). La numérotation reste continue de 1 à N ;
-un anneau autour d'un point signale les endroits où lever le crayon.
-L'habitude du 1-2-3 est préservée.
+Un contour extérieur est une boucle fermée : une seule séquence `1 → N`, sans
+ambiguïté. Dès qu'on garde l'intérieur, le dessin devient un **graphe avec des
+embranchements**, et le théorème d'Euler interdit de le parcourir d'un seul
+trait : chaque sommet de degré impair force une fin de séquence.
 
-Pour éviter de multiplier les levers de crayon, le moteur **relie les traits qui
-s'arrêtent juste avant de se toucher** : une moustache qui frôle le contour, un
-poil qui s'interrompt. Chaque liaison supprime une séquence, et comme la limite
-est une distance, les objets réellement éloignés restent séparés tout seuls. Sur
-le lapin endormi : **16 séquences au lieu de 39**, pour 7 % de trait ajouté.
+La réponse est donc un puzzle en **plusieurs séquences, en nombre minimal
+démontré**. La numérotation reste continue de 1 à N, et un anneau signale les
+endroits où lever le crayon. L'habitude du 1-2-3 est préservée.
 
-Le curseur « liaisons ajoutées » permet d'arbitrer : à 0 mm on ne touche pas au
-dessin mais il faut lever le crayon souvent ; au-delà de 12 mm on commence à
-redessiner plutôt qu'à prolonger.
+Pour éviter de multiplier ces levers, le moteur **relie les traits qui s'arrêtent
+juste avant de se toucher** : une moustache qui frôle le contour, un poil qui
+s'interrompt. Chaque liaison supprime une séquence, et comme la limite est une
+distance, les objets réellement éloignés restent séparés tout seuls.
 
-## Comment ça marche
+## Ce que ça donne
 
-```
-image -> seuil d'Otsu -> squelettisation -> graphe -> parcours eulériens
-      -> placement des points -> SVG imprimable
-```
+Mesuré sur trois coloriages, à 250 points par page A4 :
 
-Le détail de chaque étape, les mesures et les limites connues sont dans
-[AGENTS.md](AGENTS.md).
+| | lapin endormi | deux lapins | trois lapins |
+|---|---:|---:|---:|
+| Tracé intérieur conservé | 69 % | 55 % | 38 % |
+| Traits extraits | 171 | 292 | 431 |
+| Jonctions trouvées | 81 | 121 | 174 |
+| Sortie d'un contour seul | 19 boucles | 10 boucles | 33 boucles |
+| Séquences sans liaisons | 39 | 50 | 69 |
+| **Séquences avec liaisons** | **16** | **26** | **29** |
+| Numéros superposés | 0 | 0 | 0 |
+| Fidélité, écart max en A4 | 1,29 mm | 1,65 mm | 3,17 mm |
+| Temps de calcul | 196 ms | 218 ms | 285 ms |
 
 ## Démarrer
 
@@ -51,40 +65,80 @@ make install
 make start      # http://localhost:1234
 ```
 
-Dépose un dessin au trait (coloriage, illustration, logo), règle le nombre de
-points et l'espacement, puis **télécharge le PDF**.
+Dépose un dessin au trait, règle le nombre de points, et **télécharge le PDF**.
 
 Le PDF est la sortie recommandée : une page A4 exacte, à l'échelle prévue, sans
-l'en-tête ni la pagination que le navigateur ajoute à l'impression (une page web
-ne peut pas les désactiver, c'est un réglage du dialogue d'impression). Le SVG
-reste disponible pour retoucher le tracé dans un éditeur vectoriel.
+l'en-tête ni la pagination que le navigateur ajoute à l'impression. Une page web
+ne peut pas les désactiver, c'est un réglage du dialogue d'impression, alors le
+PDF est écrit directement.
 
-Le bouton **« Image source »** superpose le dessin d'origine au puzzle, avec un
-curseur d'opacité : pratique pour vérifier d'un coup d'oeil que les points
-suivent bien les traits.
+Le réglage qui marche : **environ 250 points, 2,5 mm d'espacement, 8 mm de
+liaisons**.
 
-Le réglage qui marche : **environ 250 points par page A4, 2,5 mm d'espacement et
-8 mm de liaisons**.
+## Comment ça marche
 
-Les points peuvent être très proches sans que ce soit un problème : chaque numéro
-est placé automatiquement à l'une des huit positions libres autour de sa
-pastille, de sorte qu'aucun ne chevauche un autre. Le panneau de mesures affiche
-« Numéros superposés », qui doit rester à zéro.
+```mermaid
+flowchart TD
+    A[Image] --> B[Seuil d'Otsu<br/>noir et blanc]
+    B --> C[Squelettisation<br/>Zhang-Suen, traits de 1 px]
+    C --> D[Graphe<br/>sommets = extrémités et jonctions]
+    D --> E[Nettoyages<br/>barbules, micro-boucles, faux sommets]
+    E --> F[Liaisons<br/>ponts entre sommets impairs]
+    F --> G[Parcours eulériens<br/>Hierholzer, nombre minimal]
+    G --> H[Points<br/>Douglas-Peucker + budget]
+    H --> I[Numéros<br/>8 positions, zéro chevauchement]
+    I --> J[PDF A4 / SVG]
+```
+
+L'étape que personne ne fait est la **troisième** : construire un vrai graphe du
+squelette, avec ses embranchements, au lieu de suivre un contour. Tout le reste
+en découle.
+
+### Pourquoi tout tient dans le navigateur
+
+Le moteur fait **2 600 lignes** et n'a **aucune dépendance de calcul** : ni
+OpenCV, ni WASM, ni modèle. React ne sert qu'à l'interface. Les algorithmes
+utilisés ont tous été publiés avant OpenCV et tiennent chacun sur une page :
+
+| Étape | Algorithme | Année |
+|---|---|---|
+| Seuillage | Otsu | 1979 |
+| Squelettisation | Zhang-Suen | 1984 |
+| Parcours | Hierholzer | 1873 |
+| Simplification | Douglas-Peucker | 1973 |
+| Distance au fond | chamfer 3-4 | 1966 |
+
+Conséquence directe : **ton image ne quitte jamais ton poste.** Le navigateur la
+décode, tout le reste se calcule chez toi.
 
 ## Bien choisir son image
 
 - **Idéal** : dessin au trait noir sur fond blanc (coloriage, encrage, logo).
 - **Recadrer les filigranes** : un logo de site consomme des dizaines de points.
-- **Photos** : pas encore géré, ça demanderait un extracteur de traits appris.
+- **Photos** : pas encore géré. Il faudrait un extracteur de traits appris, et
+  c'est le seul endroit du projet où une dépendance serait inévitable.
+
+## Limites connues
+
+- Le budget de points est compté **avant** le retrait des numéros incasables : on
+  finit parfois sous la cible. Le curseur reste un ordre de grandeur.
+- Les liaisons ajoutent des traits absents de l'image. C'est assumé et mesuré ;
+  au-delà de 12 mm elles cessent de prolonger le dessin pour le redessiner.
+- Sur un dessin très dense, deux traits distants de 2 mm portent forcément des
+  pastilles proches. Les numéros, eux, ne se chevauchent jamais.
 
 ## Développer
 
 ```sh
-make check      # build + lint + typecheck + knip + tests
+make check      # build + lint + typecheck + knip + 140 tests
 make bench      # mesure les images de référence et écrit out/
+make og         # régénère l'image de partage
 make help       # toutes les commandes
 ```
 
+L'architecture, les décisions prises et les pièges rencontrés sont documentés
+dans [AGENTS.md](AGENTS.md).
+
 ## Licence
 
-MIT
+[MIT](LICENSE)

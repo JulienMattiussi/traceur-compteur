@@ -5,10 +5,11 @@ import { Logo, TitleLink } from '@/components/Logo'
 import { PuzzlePreview, type ViewMode } from '@/components/PuzzlePreview'
 import { StatsPanel } from '@/components/StatsPanel'
 import { Toolbar } from '@/components/Toolbar'
-import { download, loadGrayImage, type LoadedImage } from '@/lib/image'
+import { download, loadGrayImage, type LoadedImage } from '@/platform/image'
 import { renderPdf } from '@/lib/pdf'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
-import { DEFAULT_SETTINGS, spacingInPixels, type Settings } from '@/lib/settings'
+import { spacingInPixels } from '@/lib/page'
+import { DEFAULT_SETTINGS, type Settings } from '@/lib/settings'
 import { renderSvg } from '@/lib/svg'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {

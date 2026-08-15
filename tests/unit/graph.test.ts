@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildGraph, dissolveDegreeTwoNodes, dropDegenerateLoops, pruneSpurs } from '@/lib/graph'
+import { buildGraph } from '@/lib/graph'
+import { dissolveDegreeTwoNodes, dropDegenerateLoops, pruneSpurs } from '@/lib/graph-cleanup'
 import { thin } from '@/lib/thin'
 import type { GraphEdge, Point, SkeletonGraph } from '@/lib/types'
 import { circle, createMask, line, rectangle } from '../fixtures'

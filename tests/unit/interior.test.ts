@@ -4,7 +4,7 @@ import {
   countInkComponents,
   distanceTransform,
   outsideRegion,
-} from '@/lib/baseline'
+} from '@/lib/interior'
 import { thin } from '@/lib/thin'
 import { circle, createMask, line, rectangle } from '../fixtures'
 
