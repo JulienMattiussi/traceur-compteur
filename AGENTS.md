@@ -295,6 +295,27 @@ piloter Chrome par CDP (`--remote-debugging-port`), pousser un fichier dans
 l'`input` via `DataTransfer`, puis `Page.captureScreenshot`. C'est le seul moyen
 de traverser le même chemin que l'utilisateur, décodage canvas compris.
 
+## Métadonnées de partage
+
+Les robots des réseaux sociaux ne lisent que du HTML statique : ils n'exécutent
+aucun script, et `og:image` n'accepte pas d'URL relative. Le domaine doit donc
+être écrit en dur au moment du build, d'où **`VITE_SITE_URL` dans `.env`**, que
+Vite substitue dans `index.html`. Ce fichier est versionné : il ne contient
+qu'une URL publique.
+
+**Changer d'hébergeur veut dire changer cette ligne**, sinon l'aperçu affiche un
+titre et une description corrects avec une image cassée, ce qui est exactement le
+symptôme qu'on obtient quand l'URL pointe ailleurs.
+
+L'image elle-même (`public/og.png`, 1200x630) est produite par `make og` : ce
+n'est pas une maquette mais un vrai puzzle calculé par le moteur sur un dessin
+tracé dans `tools/og.ts`. Vérifier après déploiement :
+
+```sh
+curl -sI https://<le-site>/og.png | head -2      # doit répondre 200 image/png
+curl -s https://<le-site>/ | grep 'og:image'     # doit pointer sur ce même hôte
+```
+
 ## Contraintes techniques
 
 - **100 % front-end** : aucun appel serveur, l'image ne quitte pas le poste.

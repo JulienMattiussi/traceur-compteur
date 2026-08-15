@@ -191,6 +191,20 @@ export default function App() {
             )}
           </main>
         </div>
+
+        <footer className="mt-10 text-center text-sm text-slate-500 print:hidden">
+          <a
+            href="https://github.com/JulienMattiussi/traceur-compteur"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 transition-colors hover:text-slate-900"
+          >
+            Fait avec <span className="text-rose-500">&#10084;&#65039;</span> par{' '}
+            <span className="font-medium underline decoration-sky-400 decoration-2 underline-offset-4">
+              YavaDeus
+            </span>
+          </a>
+        </footer>
       </div>
     </div>
   )

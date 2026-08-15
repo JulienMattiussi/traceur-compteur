@@ -36,3 +36,15 @@ describe('App', () => {
     expect(screen.getByText(/Glisse un dessin au trait/)).toBeInTheDocument()
   })
 })
+
+describe('signature', () => {
+  it('renvoie vers le dépôt du projet', () => {
+    render(<App />)
+
+    const link = screen.getByRole('link', { name: /Fait avec .* par YavaDeus/ })
+    expect(link).toHaveAttribute('href', 'https://github.com/JulienMattiussi/traceur-compteur')
+    // Ouvert dans un nouvel onglet : on ne veut pas perdre le puzzle en cours.
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noreferrer')
+  })
+})

@@ -139,6 +139,15 @@ make help       # toutes les commandes
 L'architecture, les décisions prises et les pièges rencontrés sont documentés
 dans [AGENTS.md](AGENTS.md).
 
+## Déployer
+
+Le site est statique : `make build` produit `dist/`, à servir tel quel.
+
+Une seule chose à adapter, **`VITE_SITE_URL` dans `.env`** : les aperçus de
+partage ont besoin d'URL absolues, et un robot de réseau social ne peut pas
+deviner le domaine. Si l'image d'aperçu apparaît cassée alors que le titre passe,
+c'est presque toujours ça.
+
 ## Licence
 
 [MIT](LICENSE)
