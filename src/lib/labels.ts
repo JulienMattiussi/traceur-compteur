@@ -1,3 +1,4 @@
+import { countDots } from '@/lib/dots'
 import type { DotSequence, LabelMetrics, PlacedLabel, Point } from '@/lib/types'
 
 /**
@@ -141,7 +142,6 @@ export function placeLabels(sequences: DotSequence[], metrics: LabelMetrics): Pl
   return placed
 }
 
-
 /**
  * Retire les points dont le numéro n'a trouvé aucune place, puis renumérote. Une
  * séquence ne descend jamais sous trois points : mieux vaut un numéro serré qu'une
@@ -162,9 +162,7 @@ export function dropUnplaceable(
   let running = 1
 
   for (const sequence of sequences) {
-    const survivors = sequence.dots.filter(
-      (_, index) => !doomed.has(sequence.firstNumber + index),
-    )
+    const survivors = sequence.dots.filter((_, index) => !doomed.has(sequence.firstNumber + index))
     const dots = survivors.length >= floor ? survivors : sequence.dots
     kept.push({ dots, closed: sequence.closed, firstNumber: running })
     running += dots.length
@@ -197,9 +195,6 @@ export function resolveLabels(
   metrics: LabelMetrics,
   maxAttempts = 3,
 ): ResolvedLabels {
-  const countDots = (list: DotSequence[]): number =>
-    list.reduce((total, sequence) => total + sequence.dots.length, 0)
-
   const before = countDots(sequences)
   let current = sequences
   let labels = placeLabels(current, metrics)

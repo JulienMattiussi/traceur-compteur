@@ -1,3 +1,6 @@
+import { spacingInPixels } from '@/lib/page'
+import type { PipelineOptions } from '@/lib/pipeline'
+
 /** Réglages exposés à l'utilisateur. Un sous-ensemble volontairement réduit des options du moteur. */
 export interface Settings {
   /** Budget de points : le moteur ajuste la fidélité pour le tenir. */
@@ -28,4 +31,17 @@ export const DEFAULT_SETTINGS: Settings = {
   pruneSpursBelow: 6,
   minBlobArea: 24,
   threshold: 'auto',
+}
+
+/** Réglages en millimètres imprimés vers options du moteur en pixels d'image. */
+export function puzzleOptions(settings: Settings, imageWidth: number): PipelineOptions {
+  const minSpacing = spacingInPixels(imageWidth, settings.spacingMm)
+  return {
+    maxDots: settings.maxDots,
+    minSpacing,
+    // Sous deux fois l'espacement, un parcours ne peut pas porter deux pastilles
+    // lisibles.
+    minTrailLength: minSpacing * 2,
+    bridgeGap: spacingInPixels(imageWidth, settings.bridgeMm),
+  }
 }

@@ -1,3 +1,4 @@
+import { forEachInkComponent } from '@/lib/pixels'
 import type { Mask } from '@/lib/types'
 
 /**
@@ -116,33 +117,7 @@ export function classifyInterior(mask: Mask, skeleton: Mask): Uint8Array {
  * renvoie un générateur par contour extérieur : sa sortie complète.
  */
 export function countInkComponents(mask: Mask): number {
-  const { width, height, data } = mask
-  const seen = new Uint8Array(width * height)
   let count = 0
-
-  for (let start = 0; start < data.length; start++) {
-    if (data[start] !== 1 || seen[start]) continue
-    count++
-
-    const stack = [start]
-    seen[start] = 1
-    while (stack.length > 0) {
-      const p = stack.pop()!
-      const x = p % width
-      const y = (p - x) / width
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = x + dx
-          const ny = y + dy
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
-          const q = ny * width + nx
-          if (data[q] !== 1 || seen[q]) continue
-          seen[q] = 1
-          stack.push(q)
-        }
-      }
-    }
-  }
-
+  forEachInkComponent(mask, () => count++)
   return count
 }

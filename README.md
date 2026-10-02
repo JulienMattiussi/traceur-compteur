@@ -96,7 +96,7 @@ en découle.
 
 ### Pourquoi tout tient dans le navigateur
 
-Le moteur fait **2 600 lignes** et n'a **aucune dépendance de calcul** : ni
+Le moteur fait **2 500 lignes** et n'a **aucune dépendance de calcul** : ni
 OpenCV, ni WASM, ni modèle. React ne sert qu'à l'interface. Les algorithmes
 utilisés ont tous été publiés avant OpenCV et tiennent chacun sur une page :
 
@@ -130,7 +130,7 @@ décode, tout le reste se calcule chez toi.
 ## Développer
 
 ```sh
-make check      # build + lint + typecheck + knip + 140 tests
+make check      # build + format + lint + typecheck + knip + tests
 make bench      # mesure les images de référence et écrit out/
 make og         # régénère l'image de partage
 make help       # toutes les commandes

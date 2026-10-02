@@ -25,10 +25,7 @@ function stubCanvas(width: number, height: number): void {
     rgba[i * 4 + 3] = 255
   }
 
-  vi.stubGlobal(
-    'createImageBitmap',
-    vi.fn().mockResolvedValue({ width, height, close: vi.fn() }),
-  )
+  vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width, height, close: vi.fn() }))
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
     fillStyle: '',
     fillRect: vi.fn(),
@@ -87,17 +84,16 @@ describe('surimpression de l’image source', () => {
     const display = screen.getByRole('group', { name: 'Affichage' })
     const exports = screen.getByRole('group', { name: 'Exporter' })
 
-    expect(within(display).getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'Le puzzle',
-      'Avec le tracé',
-      'La solution',
-      'Image source',
-    ])
-    expect(within(exports).getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'Télécharger le PDF',
-      'Le SVG',
-      'Imprimer',
-    ])
+    expect(
+      within(display)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Le puzzle', 'Avec le tracé', 'La solution', 'Image source'])
+    expect(
+      within(exports)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Télécharger le PDF', 'Le SVG', 'Imprimer'])
   })
 
   it('ne déplace aucun bouton quand le curseur apparaît', async () => {

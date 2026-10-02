@@ -21,8 +21,10 @@ export function spacingInPixels(imageWidth: number, millimetres: number): number
  */
 export function metricsFor(width: number, height: number) {
   const pixelsPerMm = width / PAGE_WIDTH_MM
+  const dotRadius = 0.55 * pixelsPerMm
   return {
-    dotRadius: 0.55 * pixelsPerMm,
+    dotRadius,
+    ringRadius: dotRadius + 1.4,
     fontSize: 2.4 * pixelsPerMm,
     canvasWidth: width,
     canvasHeight: height,

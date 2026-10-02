@@ -32,6 +32,11 @@ describe('metricsFor', () => {
     expect(metricsFor(700, 900).canvasHeight).toBe(900)
   })
 
+  it('entoure la pastille de son anneau de début de séquence', () => {
+    const metrics = metricsFor(700, 900)
+    expect(metrics.ringRadius).toBeGreaterThan(metrics.dotRadius)
+  })
+
   it('donne une police plus grande que la pastille, pour un numéro lisible', () => {
     const metrics = metricsFor(700, 900)
     expect(metrics.fontSize).toBeGreaterThan(metrics.dotRadius * 2)

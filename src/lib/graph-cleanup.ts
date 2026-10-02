@@ -1,3 +1,4 @@
+import { appendPath, polylineLength } from '@/lib/simplify'
 import type { GraphEdge, GraphNode, SkeletonGraph } from '@/lib/types'
 
 /**
@@ -71,22 +72,17 @@ export function dissolveDegreeTwoNodes(graph: SkeletonGraph): SkeletonGraph {
     const to = second.a === victim.id ? second.b : second.a
 
     const points = [...incoming]
-    for (const point of outgoing) {
-      const last = points[points.length - 1]!
-      if (last.x === point.x && last.y === point.y) continue
-      points.push(point)
-    }
-
-    let length = 0
-    for (let i = 1; i < points.length; i++) {
-      const previous = points[i - 1]!
-      const cur = points[i]!
-      length += Math.hypot(cur.x - previous.x, cur.y - previous.y)
-    }
+    appendPath(points, outgoing)
 
     edges = [
       ...edges.filter((edge) => edge.id !== firstId && edge.id !== secondId),
-      { id: Math.max(...edges.map((edge) => edge.id)) + 1, a: from, b: to, points, length },
+      {
+        id: Math.max(...edges.map((edge) => edge.id)) + 1,
+        a: from,
+        b: to,
+        points,
+        length: polylineLength(points),
+      },
     ]
     nodes = nodes.filter((node) => node.id !== victim.id)
   }

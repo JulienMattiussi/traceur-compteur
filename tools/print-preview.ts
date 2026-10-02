@@ -1,8 +1,11 @@
-// Utilitaire jetable : reproduit la structure imprimée de l'application avec le
-// CSS réellement construit, pour vérifier au navigateur combien de pages sortent.
+/**
+ * Reproduit la structure imprimée de l'application avec le CSS réellement
+ * construit, pour vérifier au navigateur combien de pages sortent. Le balisage
+ * est recopié de `App.tsx` : à resynchroniser si la mise en page change.
+ */
 import { readdirSync, writeFileSync } from 'node:fs'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
-import { spacingInPixels } from '@/lib/page'
+import { DEFAULT_SETTINGS, puzzleOptions } from '@/lib/settings'
 import { renderSvg } from '@/lib/svg'
 import { readPgm } from './pgm'
 
@@ -12,13 +15,12 @@ const css = readdirSync('dist/assets').find((f) => f.endsWith('.css'))!
 
 const { width, height, gray } = readPgm(`tools/fixtures/${name}.pgm`)
 const analysis = analyse(gray, width, height)
-const minSpacing = spacingInPixels(width, 2.5)
-const puzzle = buildPuzzle(analysis, width, height, {
-  maxDots: 250,
-  minSpacing,
-  minTrailLength: minSpacing * 2,
-  bridgeGap: spacingInPixels(width, 8),
-})
+const puzzle = buildPuzzle(
+  analysis,
+  width,
+  height,
+  puzzleOptions({ ...DEFAULT_SETTINGS, maxDots: 250 }, width),
+)
 
 writeFileSync(
   out,

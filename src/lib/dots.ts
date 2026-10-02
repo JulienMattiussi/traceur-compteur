@@ -1,4 +1,4 @@
-import { deviationByIndices, simplifyIndices } from '@/lib/simplify'
+import { deviationByIndices, polylineLength, simplifyIndices } from '@/lib/simplify'
 import type { Point, Trail } from '@/lib/types'
 
 /**
@@ -11,7 +11,7 @@ export interface DotOptions {
    * et le trait d'origine. C'est le vrai réglage de fidélité.
    */
   tolerance?: number
-  /** Distance minimale entre deux points consécutifs, pour que les numéros restent lisibles. */
+  /** Distance minimale entre deux points consécutifs : règle la densité du tracé. */
   minSpacing?: number
   /** Budget de points. La tolérance est ajustée pour s'en approcher au mieux. */
   maxDots?: number
@@ -24,7 +24,7 @@ export interface DotOptions {
  * tolère un virage marqué plus serré que le reste, mais jamais collé : deux
  * pastilles superposées rendent les numéros illisibles.
  */
-function enforceSpacingIndices(
+export function enforceSpacingIndices(
   points: Point[],
   indices: number[],
   minSpacing: number,
@@ -71,16 +71,6 @@ function enforceSpacingIndices(
   return kept
 }
 
-export function enforceSpacing(points: Point[], minSpacing: number, closed: boolean): Point[] {
-  const indices = enforceSpacingIndices(
-    points,
-    points.map((_, index) => index),
-    minSpacing,
-    closed,
-  )
-  return indices.map((index) => points[index]!)
-}
-
 function turnAngle(a: Point, b: Point, c: Point): number {
   const angle = Math.abs(Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(b.y - a.y, b.x - a.x))
   return angle > Math.PI ? 2 * Math.PI - angle : angle
@@ -118,7 +108,6 @@ export function placeDots(trails: Trail[], options: DotOptions = {}): DotPlaceme
       const simplified = simplifyIndices(trail.points, currentTolerance)
       const indices = enforceSpacingIndices(trail.points, simplified, minSpacing, trail.closed)
 
-
       const usable = promoteToThreeDots(trail.points, indices, minSpacing, trail.closed)
 
       // Une séquence de deux points n'est qu'un segment isolé : elle coûte un
@@ -132,14 +121,16 @@ export function placeDots(trails: Trail[], options: DotOptions = {}): DotPlaceme
       }
 
       const dots = usable.map((index) => trail.points[index]!)
-      if (spanOf(dots, trail.closed) < minSpacing) {
+      if (polylineLength(dots, trail.closed) < minSpacing) {
         collapsedTrails++
         collapsedLength += trail.length
         continue
       }
 
       kept.push({ dots, closed: trail.closed })
-      maxDeviation = Math.max(maxDeviation, deviationByIndices(trail.points, indices, trail.closed))
+      // Sur `usable` et non `indices` : avant la promotion, une petite boucle n'a
+      // qu'un point et l'écart vaudrait tout son diamètre.
+      maxDeviation = Math.max(maxDeviation, deviationByIndices(trail.points, usable, trail.closed))
     }
 
     return {
@@ -161,20 +152,20 @@ export function placeDots(trails: Trail[], options: DotOptions = {}): DotPlaceme
   let low = FLOOR
   let high = Math.max(tolerance, FLOOR)
 
-  while (countDots(run(high)) > maxDots && high < 512) high *= 2
-  if (countDots(run(low)) <= maxDots) return run(low)
+  while (countDots(run(high).sequences) > maxDots && high < 512) high *= 2
+  if (countDots(run(low).sequences) <= maxDots) return run(low)
 
   for (let i = 0; i < 20 && high - low > 0.02; i++) {
     const middle = (low + high) / 2
-    if (countDots(run(middle)) > maxDots) low = middle
+    if (countDots(run(middle).sequences) > maxDots) low = middle
     else high = middle
   }
 
   return run(high)
 }
 
-function countDots(placement: DotPlacement): number {
-  return placement.sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
+export function countDots(sequences: { dots: Point[] }[]): number {
+  return sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
 }
 
 /**
@@ -222,18 +213,3 @@ function promoteToThreeDots(
 
   return spread([first, middle, last])
 }
-
-/** Longueur de la ligne brisée reliant les pastilles, fermeture comprise. */
-function spanOf(dots: Point[], closed: boolean): number {
-  let total = 0
-  for (let i = 1; i < dots.length; i++) {
-    total += Math.hypot(dots[i]!.x - dots[i - 1]!.x, dots[i]!.y - dots[i - 1]!.y)
-  }
-  if (closed && dots.length > 2) {
-    const head = dots[0]!
-    const foot = dots[dots.length - 1]!
-    total += Math.hypot(head.x - foot.x, head.y - foot.y)
-  }
-  return total
-}
-

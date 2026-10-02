@@ -1,16 +1,7 @@
 import { cleanUpGraph } from '@/lib/graph-cleanup'
+import { NEIGHBOURS_8 } from '@/lib/pixels'
+import { polylineLength } from '@/lib/simplify'
 import type { GraphEdge, GraphNode, Mask, Point, SkeletonGraph } from '@/lib/types'
-
-const NEIGHBOURS_8 = [
-  [-1, -1],
-  [0, -1],
-  [1, -1],
-  [-1, 0],
-  [1, 0],
-  [-1, 1],
-  [0, 1],
-  [1, 1],
-] as const
 
 export interface GraphOptions {
   /**
@@ -114,13 +105,7 @@ export function buildGraph(skeleton: Mask, options: GraphOptions = {}): Skeleton
   const directLinks = new Set<string>()
 
   const addEdge = (a: number, b: number, points: Point[]): void => {
-    let length = 0
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1]!
-      const cur = points[i]!
-      length += Math.hypot(cur.x - prev.x, cur.y - prev.y)
-    }
-    edges.push({ id: edges.length, a, b, points, length })
+    edges.push({ id: edges.length, a, b, points, length: polylineLength(points) })
   }
 
   /**
@@ -169,7 +154,9 @@ export function buildGraph(skeleton: Mask, options: GraphOptions = {}): Skeleton
         // Impasse : la chaîne butte sur des pixels déjà parcourus. On crée un
         // sommet là où elle s'arrête. La refermer sur son point de départ en
         // ferait une boucle géométriquement fausse, avec un segment fantôme
-        // traversant tout le dessin.
+        // traversant tout le dessin. Jamais observé après Zhang-Suen (12
+        // coloriages, 4 500 dessins aléatoires) : gardé pour qu'un trait ne
+        // disparaisse pas en silence si le cas se présente.
         addEdge(fromNode, forceNode(current), points)
       }
       return
@@ -190,7 +177,8 @@ export function buildGraph(skeleton: Mask, options: GraphOptions = {}): Skeleton
         if (neighbourNode === nodeId) continue
 
         if (neighbourNode !== -1) {
-          // Deux sommets collés : arête sans pixel intermédiaire.
+          // Deux sommets collés : arête sans pixel intermédiaire. Seul un sommet
+          // forcé par une impasse peut en toucher un autre.
           const key = p < q ? `${p}:${q}` : `${q}:${p}`
           if (directLinks.has(key)) continue
           directLinks.add(key)

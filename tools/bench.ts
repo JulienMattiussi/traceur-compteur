@@ -4,16 +4,17 @@ import { bridgeOddVertices } from '@/lib/bridge'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
 import { PAGE_WIDTH_MM, spacingInPixels } from '@/lib/page'
 import { renderPdf } from '@/lib/pdf'
+import { DEFAULT_SETTINGS, puzzleOptions } from '@/lib/settings'
 import { renderSvg } from '@/lib/svg'
 import type { Puzzle } from '@/lib/types'
 import { readPgm } from './pgm'
-import { createRaster, drawDisc, drawPolyline, writePng, type Colour } from './raster'
+import { createRaster, drawDisc, drawPolyline, writePng, type Color } from './raster'
 
 const FIXTURES = 'tools/fixtures'
 const OUT = 'out'
 const BUDGETS = [250, 500, 1000]
 
-const PALETTE: Colour[] = [
+const PALETTE: Color[] = [
   [37, 99, 235],
   [219, 39, 119],
   [22, 163, 74],
@@ -51,7 +52,6 @@ function main(): void {
     )
     console.log(`  un contour seul   ${g.contourLoops} boucle(s) fermee(s), 0 jonction`)
 
-    // Aperçu du squelette vectorisé : silhouette en noir, intérieur en rouge.
     const skeletonView = createRaster(width, height)
     for (const edge of analysis.graph.edges) {
       drawPolyline(skeletonView, edge.points, [17, 24, 39], 1)
@@ -59,18 +59,17 @@ function main(): void {
     writePng(join(OUT, `${name}-0-squelette.png`), skeletonView)
 
     for (const maxDots of BUDGETS) {
-      const minSpacing = spacingInPixels(width, 2.5)
-      const puzzle = buildPuzzle(analysis, width, height, {
-        maxDots,
-        minSpacing,
-        minTrailLength: minSpacing * 2,
-        bridgeGap: spacingInPixels(width, 8),
-      })
+      const puzzle = buildPuzzle(
+        analysis,
+        width,
+        height,
+        puzzleOptions({ ...DEFAULT_SETTINGS, maxDots }, width),
+      )
       const s = puzzle.stats
       const totalMs = Object.values(s.timings).reduce((a, b) => a + b, 0)
 
-      // Une page A4 imprimée fait 210 mm de large : c'est la seule échelle à
-      // laquelle « lisible » a un sens.
+      // La largeur utile de la page A4 : c'est la seule échelle à laquelle
+      // « lisible » a un sens.
       const mmPerPixel = PAGE_WIDTH_MM / width
       console.log(
         `  budget ${String(maxDots).padStart(4)} -> ${String(s.dots).padStart(4)} points, ` +
@@ -78,7 +77,6 @@ function main(): void {
           `tol ${s.tolerance.toFixed(2)} px, ecart max ${s.maxDeviation.toFixed(1)} px ` +
           `(${(s.maxDeviation * mmPerPixel).toFixed(2)} mm en A4), ` +
           `espacement mini ${(s.minSpacing * mmPerPixel).toFixed(2)} mm, ` +
-          `serres ${s.crowdedPairs}, ` +
           `perdu ${s.droppedTrails} traits (${((s.droppedLength / g.strokeLength) * 100).toFixed(1)} %), ` +
           `ambigus ${s.ambiguities.length}, ${totalMs.toFixed(0)} ms, ` +
           `mini-seq ${Math.min(...puzzle.sequences.map((q) => q.dots.length))} pts, ` +
@@ -93,13 +91,12 @@ function main(): void {
 
     // Le pontage est le levier du nombre de séquences.
     for (const mm of [0, 2, 4, 6, 9, 12]) {
-      const minSpacing = spacingInPixels(width, 2.5)
-      const puzzle = buildPuzzle(analysis, width, height, {
-        maxDots: 300,
-        minSpacing,
-        minTrailLength: minSpacing * 2,
-        bridgeGap: spacingInPixels(width, mm),
-      })
+      const puzzle = buildPuzzle(
+        analysis,
+        width,
+        height,
+        puzzleOptions({ ...DEFAULT_SETTINGS, maxDots: 300, bridgeMm: mm }, width),
+      )
       const st = puzzle.stats
       console.log(
         `    pont ${String(mm).padStart(2)} mm -> ${String(st.sequences).padStart(3)} sequences ` +

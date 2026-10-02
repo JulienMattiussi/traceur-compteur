@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { writeFileSync, unlinkSync } from 'node:fs'
-import { spacingInPixels } from '@/lib/page'
+import { baselineOf } from '@/lib/labels'
 import { generatePuzzle } from '@/lib/pipeline'
+import { DEFAULT_SETTINGS, puzzleOptions } from '@/lib/settings'
 import type { Mask, Point } from '@/lib/types'
+import { createMask, line, maskToGray } from '../tests/fixtures'
 
 /**
  * Fabrique l'image de partage (1200x630).
@@ -14,44 +16,7 @@ import type { Mask, Point } from '@/lib/types'
 const WIDTH = 1200
 const HEIGHT = 630
 
-function createMask(width: number, height: number): Mask {
-  return { width, height, data: new Uint8Array(width * height) }
-}
-
-function line(mask: Mask, from: Point, to: Point, thickness = 3): void {
-  let x = Math.round(from.x)
-  let y = Math.round(from.y)
-  const x1 = Math.round(to.x)
-  const y1 = Math.round(to.y)
-  const dx = Math.abs(x1 - x)
-  const dy = Math.abs(y1 - y)
-  const stepX = x < x1 ? 1 : -1
-  const stepY = y < y1 ? 1 : -1
-  let error = dx - dy
-  const reach = Math.floor((thickness - 1) / 2)
-
-  for (;;) {
-    for (let oy = -reach; oy <= reach; oy++) {
-      for (let ox = -reach; ox <= reach; ox++) {
-        const px = x + ox
-        const py = y + oy
-        if (px >= 0 && py >= 0 && px < mask.width && py < mask.height) {
-          mask.data[py * mask.width + px] = 1
-        }
-      }
-    }
-    if (x === x1 && y === y1) break
-    const doubled = 2 * error
-    if (doubled > -dy) {
-      error -= dy
-      x += stepX
-    }
-    if (doubled < dx) {
-      error += dx
-      y += stepY
-    }
-  }
-}
+const THICKNESS = 3
 
 /** Arc de cercle, en degrés, sens trigonométrique. */
 function arc(mask: Mask, cx: number, cy: number, r: number, from: number, to: number): void {
@@ -60,7 +25,7 @@ function arc(mask: Mask, cx: number, cy: number, r: number, from: number, to: nu
   for (let i = 0; i <= steps; i++) {
     const angle = ((from + ((to - from) * i) / steps) * Math.PI) / 180
     const point = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
-    if (previous) line(mask, previous, point)
+    if (previous) line(mask, previous, point, THICKNESS)
     previous = point
   }
 }
@@ -71,17 +36,17 @@ function catFace(): Mask {
 
   arc(mask, 260, 300, 185, 0, 360)
   // Oreilles posées sur le crâne.
-  line(mask, { x: 132, y: 190 }, { x: 118, y: 60 })
-  line(mask, { x: 118, y: 60 }, { x: 232, y: 132 })
-  line(mask, { x: 388, y: 190 }, { x: 402, y: 60 })
-  line(mask, { x: 402, y: 60 }, { x: 288, y: 132 })
+  line(mask, { x: 132, y: 190 }, { x: 118, y: 60 }, THICKNESS)
+  line(mask, { x: 118, y: 60 }, { x: 232, y: 132 }, THICKNESS)
+  line(mask, { x: 388, y: 190 }, { x: 402, y: 60 }, THICKNESS)
+  line(mask, { x: 402, y: 60 }, { x: 288, y: 132 }, THICKNESS)
 
   // Ce que les générateurs par contour jettent : les yeux, le museau, les moustaches.
   arc(mask, 195, 265, 34, 0, 360)
   arc(mask, 325, 265, 34, 0, 360)
-  line(mask, { x: 260, y: 330 }, { x: 238, y: 358 })
-  line(mask, { x: 238, y: 358 }, { x: 282, y: 358 })
-  line(mask, { x: 282, y: 358 }, { x: 260, y: 330 })
+  line(mask, { x: 260, y: 330 }, { x: 238, y: 358 }, THICKNESS)
+  line(mask, { x: 238, y: 358 }, { x: 282, y: 358 }, THICKNESS)
+  line(mask, { x: 282, y: 358 }, { x: 260, y: 330 }, THICKNESS)
   arc(mask, 222, 372, 40, 350, 60)
   arc(mask, 298, 372, 120, 190, 0)
 
@@ -90,23 +55,20 @@ function catFace(): Mask {
     [372, 0],
     [392, -18],
   ] as const) {
-    line(mask, { x: 150, y: y - spread }, { x: 32, y: y - spread * 2 })
-    line(mask, { x: 370, y: y - spread }, { x: 488, y: y - spread * 2 })
+    line(mask, { x: 150, y: y - spread }, { x: 32, y: y - spread * 2 }, THICKNESS)
+    line(mask, { x: 370, y: y - spread }, { x: 488, y: y - spread * 2 }, THICKNESS)
   }
 
   return mask
 }
 
 const mask = catFace()
-const gray = new Uint8Array(mask.data.length)
-for (let i = 0; i < gray.length; i++) gray[i] = mask.data[i] === 1 ? 0 : 255
-
-const puzzle = generatePuzzle(gray, mask.width, mask.height, {
-  maxDots: 130,
-  minSpacing: spacingInPixels(mask.width, 7),
-  minTrailLength: spacingInPixels(mask.width, 14),
-  bridgeGap: spacingInPixels(mask.width, 12),
-})
+const puzzle = generatePuzzle(
+  maskToGray(mask),
+  mask.width,
+  mask.height,
+  puzzleOptions({ ...DEFAULT_SETTINGS, maxDots: 130, spacingMm: 7, bridgeMm: 12 }, mask.width),
+)
 
 const INK = '#f8fafc'
 const ACCENT = '#38bdf8'
@@ -141,7 +103,7 @@ for (const sequence of puzzle.sequences) {
 }
 for (const label of puzzle.labels) {
   parts.push(
-    `<text x="${round(px(label.x))}" y="${round(py(label.y + label.height))}" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#94a3b8">${label.number}</text>`,
+    `<text x="${round(px(label.x))}" y="${round(py(baselineOf(label)))}" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#94a3b8">${label.number}</text>`,
   )
 }
 

@@ -1,4 +1,5 @@
 import { eulerTour, splitAtVirtualLinks, type Link, type Step } from '@/lib/euler'
+import { appendPath, polylineLength } from '@/lib/simplify'
 import type { GraphEdge, Point, SkeletonGraph, Trail } from '@/lib/types'
 
 /**
@@ -152,25 +153,12 @@ function buildTrail(steps: Step[]): Trail {
   for (const step of steps) {
     edgeIds.push(step.edge.id)
     const forward = step.edge.a === step.from
-    const chain = forward ? step.edge.points : [...step.edge.points].reverse()
-
-    for (const point of chain) {
-      const last = points[points.length - 1]
-      if (last && last.x === point.x && last.y === point.y) continue
-      points.push(point)
-    }
-  }
-
-  let length = 0
-  for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1]!
-    const cur = points[i]!
-    length += Math.hypot(cur.x - prev.x, cur.y - prev.y)
+    appendPath(points, forward ? step.edge.points : [...step.edge.points].reverse())
   }
 
   const closed = steps[0]!.from === steps[steps.length - 1]!.to
 
-  return { edgeIds, points, closed, length }
+  return { edgeIds, points, closed, length: polylineLength(points) }
 }
 
 /**
@@ -234,4 +222,3 @@ function orderTrails(trails: Trail[]): Trail[] {
 
   return ordered
 }
-

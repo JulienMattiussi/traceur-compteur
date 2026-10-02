@@ -40,7 +40,7 @@ export function renderSvg(puzzle: Puzzle, options: SvgOptions = {}): string {
 
   // Mêmes métriques que celles utilisées pour placer les étiquettes, sinon les
   // numéros seraient positionnés à une taille et dessinés à une autre.
-  const { dotRadius, fontSize } = metricsFor(width, height)
+  const { dotRadius, ringRadius, fontSize } = metricsFor(width, height)
   const {
     showSolution = false,
     colorBySequence = false,
@@ -57,11 +57,11 @@ export function renderSvg(puzzle: Puzzle, options: SvgOptions = {}): string {
   if (showSolution || solutionOnly) {
     for (let s = 0; s < sequences.length; s++) {
       const sequence = sequences[s]!
-      const colour = colorBySequence ? PALETTE[s % PALETTE.length]! : '#94a3b8'
+      const color = colorBySequence ? PALETTE[s % PALETTE.length]! : '#94a3b8'
       const path = sequence.dots.map((dot) => `${round(dot.x)},${round(dot.y)}`).join(' ')
       const tag = sequence.closed ? 'polygon' : 'polyline'
       parts.push(
-        `<${tag} points="${path}" fill="none" stroke="${colour}" stroke-width="${solutionOnly ? 1.4 : 1}" stroke-linejoin="round" stroke-linecap="round"/>`,
+        `<${tag} points="${path}" fill="none" stroke="${color}" stroke-width="${solutionOnly ? 1.4 : 1}" stroke-linejoin="round" stroke-linecap="round"/>`,
       )
     }
   }
@@ -69,7 +69,7 @@ export function renderSvg(puzzle: Puzzle, options: SvgOptions = {}): string {
   if (!solutionOnly) {
     for (let s = 0; s < sequences.length; s++) {
       const sequence = sequences[s]!
-      const colour = colorBySequence ? PALETTE[s % PALETTE.length]! : '#111827'
+      const color = colorBySequence ? PALETTE[s % PALETTE.length]! : '#111827'
 
       for (let i = 0; i < sequence.dots.length; i++) {
         const dot = sequence.dots[i]!
@@ -79,17 +79,17 @@ export function renderSvg(puzzle: Puzzle, options: SvgOptions = {}): string {
         if (isStart) {
           // Anneau : nouvelle séquence, on lève le crayon.
           parts.push(
-            `<circle cx="${round(dot.x)}" cy="${round(dot.y)}" r="${dotRadius + 1.4}" fill="none" stroke="${colour}" stroke-width="1"/>`,
+            `<circle cx="${round(dot.x)}" cy="${round(dot.y)}" r="${ringRadius}" fill="none" stroke="${color}" stroke-width="1"/>`,
           )
         }
         parts.push(
-          `<circle cx="${round(dot.x)}" cy="${round(dot.y)}" r="${dotRadius}" fill="${colour}"/>`,
+          `<circle cx="${round(dot.x)}" cy="${round(dot.y)}" r="${dotRadius}" fill="${color}"/>`,
         )
 
         const label = puzzle.labels[number - 1]
         if (label) {
           parts.push(
-            `<text x="${round(label.x)}" y="${round(baselineOf(label))}" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" fill="${colour}">${number}</text>`,
+            `<text x="${round(label.x)}" y="${round(baselineOf(label))}" font-family="Helvetica, Arial, sans-serif" font-size="${fontSize}" fill="${color}">${number}</text>`,
           )
         }
       }

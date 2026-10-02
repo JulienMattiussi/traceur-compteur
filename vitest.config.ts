@@ -16,11 +16,10 @@ export default defineConfig({
     include: ['tests/unit/**/*.test.ts', 'tests/component/**/*.test.tsx'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      // `skipFull` se règle sur le rapporteur lui-même : sans ça, les fichiers
+      // entièrement couverts disparaissent du tableau et on les croit non testés.
+      reporter: [['text', { skipFull: false }], 'lcov'],
       include: ['src/lib/**', 'src/platform/**'],
-      // Sans ça, les fichiers entièrement couverts disparaissent du tableau et
-      // on croit à tort qu'ils ne sont pas testés.
-      skipFull: false,
     },
   },
 })

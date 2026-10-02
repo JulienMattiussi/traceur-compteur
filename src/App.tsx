@@ -8,8 +8,7 @@ import { Toolbar } from '@/components/Toolbar'
 import { download, loadGrayImage, type LoadedImage } from '@/platform/image'
 import { renderPdf } from '@/lib/pdf'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
-import { spacingInPixels } from '@/lib/page'
-import { DEFAULT_SETTINGS, type Settings } from '@/lib/settings'
+import { DEFAULT_SETTINGS, puzzleOptions, type Settings } from '@/lib/settings'
 import { renderSvg } from '@/lib/svg'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
@@ -64,14 +63,10 @@ export default function App() {
 
   const puzzle = useMemo(() => {
     if (!analysis || !image) return null
-    const minSpacing = spacingInPixels(image.width, settings.spacingMm)
-    return buildPuzzle(analysis, image.width, image.height, {
-      maxDots: settings.maxDots,
-      minSpacing,
-      minTrailLength: minSpacing * 2,
-      bridgeGap: spacingInPixels(image.width, settings.bridgeMm),
-    })
-  }, [analysis, image, settings.maxDots, settings.spacingMm, settings.bridgeMm])
+    return buildPuzzle(analysis, image.width, image.height, puzzleOptions(settings, image.width))
+    // Dépendre de tout `settings` ne coûte rien : un réglage d'extraction change
+    // déjà `analysis`, donc le puzzle serait recalculé de toute façon.
+  }, [analysis, image, settings])
 
   const baseName = image ? image.name.replace(/\.[^.]+$/, '') : 'puzzle'
 

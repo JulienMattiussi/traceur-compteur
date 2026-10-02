@@ -66,42 +66,6 @@ describe('checkQuality', () => {
     expect(report.ambiguities).toHaveLength(0)
   })
 
-  it('compte les pastilles trop serrées entre séquences différentes', () => {
-    const report = checkQuality(
-      [
-        sequence([
-          [0, 0],
-          [30, 0],
-        ]),
-        sequence(
-          [
-            [2, 0],
-            [2, 30],
-          ],
-          3,
-        ),
-      ],
-      100,
-      7,
-    )
-    expect(report.crowdedPairs).toBeGreaterThanOrEqual(1)
-  })
-
-  it('tolère deux points consécutifs serrés dans une même séquence', () => {
-    const report = checkQuality(
-      [
-        sequence([
-          [0, 0],
-          [4, 0],
-          [40, 0],
-        ]),
-      ],
-      100,
-      7,
-    )
-    expect(report.crowdedPairs).toBe(0)
-  })
-
   it('boucle la dernière liaison d’une séquence fermée', () => {
     const closed = sequence(
       [
@@ -120,6 +84,5 @@ describe('checkQuality', () => {
 
   it('reste muet sur un puzzle vide', () => {
     expect(checkQuality([], 100).ambiguities).toHaveLength(0)
-    expect(checkQuality([], 100).crowdedPairs).toBe(0)
   })
 })

@@ -1,3 +1,4 @@
+import { forEachInkComponent } from '@/lib/pixels'
 import type { Mask } from '@/lib/types'
 
 export interface BinarizeOptions {
@@ -77,53 +78,12 @@ export function binarize(
   return minBlobArea > 0 ? despeckle(mask, minBlobArea) : mask
 }
 
-const NEIGHBOURS_8 = [
-  [-1, -1],
-  [0, -1],
-  [1, -1],
-  [-1, 0],
-  [1, 0],
-  [-1, 1],
-  [0, 1],
-  [1, 1],
-] as const
-
 /** Retire les composantes connexes d'encre trop petites pour être un trait. */
 export function despeckle(mask: Mask, minArea: number): Mask {
-  const { width, height, data } = mask
-  const out = new Uint8Array(data.length)
-  const seen = new Uint8Array(data.length)
-  const stack: number[] = []
-  const component: number[] = []
-
-  for (let start = 0; start < data.length; start++) {
-    if (!data[start] || seen[start]) continue
-
-    component.length = 0
-    stack.length = 0
-    stack.push(start)
-    seen[start] = 1
-
-    while (stack.length > 0) {
-      const p = stack.pop()!
-      component.push(p)
-      const x = p % width
-      const y = (p - x) / width
-      for (const [dx, dy] of NEIGHBOURS_8) {
-        const nx = x + dx
-        const ny = y + dy
-        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
-        const q = ny * width + nx
-        if (!data[q] || seen[q]) continue
-        seen[q] = 1
-        stack.push(q)
-      }
-    }
-
-    if (component.length >= minArea) {
-      for (const p of component) out[p] = 1
-    }
-  }
-
-  return { width, height, data: out }
+  const out = new Uint8Array(mask.data.length)
+  forEachInkComponent(mask, (pixels) => {
+    if (pixels.length < minArea) return
+    for (const p of pixels) out[p] = 1
+  })
+  return { width: mask.width, height: mask.height, data: out }
 }

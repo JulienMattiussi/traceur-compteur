@@ -26,7 +26,16 @@ describe('labelSize', () => {
 
 describe('placeLabels', () => {
   it('place le premier numéro en haut à droite de sa pastille', () => {
-    const [label] = placeLabels([sequence([[50, 50], [80, 50], [110, 50]])], METRICS)
+    const [label] = placeLabels(
+      [
+        sequence([
+          [50, 50],
+          [80, 50],
+          [110, 50],
+        ]),
+      ],
+      METRICS,
+    )
     expect(label!.x).toBeGreaterThan(50)
     expect(label!.y).toBeLessThan(50)
     expect(label!.placed).toBe(true)
@@ -55,7 +64,21 @@ describe('placeLabels', () => {
 
   it('vérifie aussi les séquences entre elles', () => {
     const labels = placeLabels(
-      [sequence([[100, 100], [130, 100], [160, 100]]), sequence([[101, 101], [131, 101], [161, 101]], 4)],
+      [
+        sequence([
+          [100, 100],
+          [130, 100],
+          [160, 100],
+        ]),
+        sequence(
+          [
+            [101, 101],
+            [131, 101],
+            [161, 101],
+          ],
+          4,
+        ),
+      ],
       METRICS,
     )
     const placed = labels.filter((label) => label.placed)
@@ -78,8 +101,10 @@ describe('placeLabels', () => {
       if (!label.placed) continue
       for (const dot of dots) {
         const inside =
-          dot.x > label.x && dot.x < label.x + label.width &&
-          dot.y > label.y && dot.y < label.y + label.height
+          dot.x > label.x &&
+          dot.x < label.x + label.width &&
+          dot.y > label.y &&
+          dot.y < label.y + label.height
         expect(inside).toBe(false)
       }
     }
@@ -97,7 +122,21 @@ describe('placeLabels', () => {
 
   it('numérote dans l’ordre des séquences', () => {
     const labels = placeLabels(
-      [sequence([[10, 10], [40, 10], [70, 10]]), sequence([[10, 60], [40, 60], [70, 60]], 4)],
+      [
+        sequence([
+          [10, 10],
+          [40, 10],
+          [70, 10],
+        ]),
+        sequence(
+          [
+            [10, 60],
+            [40, 60],
+            [70, 60],
+          ],
+          4,
+        ),
+      ],
       METRICS,
     )
     expect(labels.map((label) => label.number)).toEqual([1, 2, 3, 4, 5, 6])
@@ -106,7 +145,16 @@ describe('placeLabels', () => {
 
 describe('baselineOf', () => {
   it('place la ligne de base sous le rectangle du texte', () => {
-    const [label] = placeLabels([sequence([[50, 50], [80, 50], [110, 50]])], METRICS)
+    const [label] = placeLabels(
+      [
+        sequence([
+          [50, 50],
+          [80, 50],
+          [110, 50],
+        ]),
+      ],
+      METRICS,
+    )
     expect(baselineOf(label!)).toBeCloseTo(label!.y + label!.height)
   })
 })
@@ -135,7 +183,16 @@ describe('bornage au cadre', () => {
   })
 
   it('bascule du côté intérieur pour un point au bord droit', () => {
-    const labels = placeLabels([sequence([[398, 200], [300, 200], [200, 200]])], METRICS)
+    const labels = placeLabels(
+      [
+        sequence([
+          [398, 200],
+          [300, 200],
+          [200, 200],
+        ]),
+      ],
+      METRICS,
+    )
     // À droite il n'y a plus de place : le numéro doit passer à gauche du point.
     expect(labels[0]!.x).toBeLessThan(398)
     expect(labels[0]!.placed).toBe(true)
@@ -157,7 +214,22 @@ describe('bornage au cadre', () => {
 
 describe('dropUnplaceable', () => {
   it('retire les points signalés et renumérote sans trou', () => {
-    const sequences = [sequence([[0, 0], [10, 0], [20, 0], [30, 0]]), sequence([[0, 50], [10, 50], [20, 50]], 5)]
+    const sequences = [
+      sequence([
+        [0, 0],
+        [10, 0],
+        [20, 0],
+        [30, 0],
+      ]),
+      sequence(
+        [
+          [0, 50],
+          [10, 50],
+          [20, 50],
+        ],
+        5,
+      ),
+    ]
     const labels = placeLabels(sequences, METRICS).map((label) => ({
       ...label,
       placed: label.number !== 2,
@@ -170,14 +242,26 @@ describe('dropUnplaceable', () => {
   })
 
   it('protège une séquence qui tomberait sous trois points', () => {
-    const sequences = [sequence([[0, 0], [10, 0], [20, 0]])]
+    const sequences = [
+      sequence([
+        [0, 0],
+        [10, 0],
+        [20, 0],
+      ]),
+    ]
     const labels = placeLabels(sequences, METRICS).map((label) => ({ ...label, placed: false }))
 
     expect(dropUnplaceable(sequences, labels)[0]!.dots).toHaveLength(3)
   })
 
   it('ne touche à rien quand tous les numéros sont casés', () => {
-    const sequences = [sequence([[0, 0], [30, 0], [60, 0]])]
+    const sequences = [
+      sequence([
+        [0, 0],
+        [30, 0],
+        [60, 0],
+      ]),
+    ]
     const labels = placeLabels(sequences, METRICS)
     expect(dropUnplaceable(sequences, labels)).toBe(sequences)
   })

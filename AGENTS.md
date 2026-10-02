@@ -44,7 +44,8 @@ src/
 ├── lib/                      # Logique pure : aucun React, aucun DOM
 │   ├── types.ts              # Feuille de l'arbre de dépendances : aucun import
 │   ├── page.ts               # Géométrie de la page A4 (mm imprimés -> pixels)
-│   ├── settings.ts           # Réglages exposés à l'interface
+│   ├── settings.ts           # Réglages de l'interface et leur conversion en pixels
+│   ├── pixels.ts             # Voisinage 8-connexe et taches d'encre
 │   ├── binarize.ts           # Otsu + seuillage + despeckle + rgbaToGray
 │   ├── thin.ts               # Squelettisation Zhang-Suen
 │   ├── graph.ts              # Squelette -> graphe (sommets, arêtes, chaînes)
@@ -52,10 +53,10 @@ src/
 │   ├── bridge.ts             # Ponts entre sommets impairs : levier des séquences
 │   ├── euler.ts              # Circuit de Hierholzer et coupure aux arêtes virtuelles
 │   ├── trails.ts             # Décomposition en séquences minimales et leur ordre
-│   ├── simplify.ts           # Géométrie pure : distance, RDP, écart exact
+│   ├── simplify.ts           # Géométrie pure : longueur, distance, RDP, écart exact
 │   ├── dots.ts               # Placement des pastilles : budget, espacement, plancher
 │   ├── labels.ts             # Placement des numéros sans chevauchement
-│   ├── quality.ts            # Ambiguïtés et encombrement (index spatial)
+│   ├── quality.ts            # Ambiguïtés (index spatial)
 │   ├── interior.ts           # Mesure ce qu'un contour extérieur perdrait
 │   ├── pipeline.ts           # analyse() puis buildPuzzle()
 │   ├── svg.ts                # Export SVG (puzzle, solution, fond transparent)
@@ -77,6 +78,7 @@ tools/                        # Harnais de mesure, tourne sous Node (pas livré)
 ├── raster.ts                 # Rasteriseur minimal + écriture PNG via ffmpeg
 ├── bench.ts                  # Mesure et rend les images de référence
 ├── print-preview.ts          # Page de contrôle de la mise en page d'impression
+├── og.ts                     # Image de partage, calculée par le moteur
 └── fixtures/                 # Images de test (hors git, voir plus bas)
 tests/
 ├── fixtures.ts               # Dessins synthétiques (trait, rectangle, cercle)
@@ -109,7 +111,7 @@ image
   └─5─ trails      décomposition eulérienne minimale    -> K séquences
   └─6─ placeDots   RDP + espacement + budget + 3 points -> points numérotés
   └─7─ labels      chaque numéro à une place libre       -> étiquettes posées
-  └─8─ quality     ambiguïtés et encombrement            -> mesures
+  └─8─ quality     ambiguïtés                            -> mesures
   └─9─ svg         export imprimable
 ```
 
@@ -190,7 +192,8 @@ renumérote tout et change la largeur des étiquettes, le placement est repris
 (trois tentatives au plus).
 
 Les chiffres n'ont pas besoin d'être mesurés : en Helvetica ils ont tous la même
-avance, 0,556 em. `metricsForWidth` est la **seule** source des tailles, partagée
+avance, 0,556 em. `metricsFor` (dans `page.ts`) est la **seule** source des tailles, anneau de
+début de séquence compris,, partagée
 par le placement et par le rendu, sinon les étiquettes seraient calculées à une
 taille et dessinées à une autre.
 
@@ -237,7 +240,8 @@ plus proche donnait n'importe quoi sur un parcours repassant près de lui-même
 | Longueur ajoutée par les ponts | 7 % | 4 % | 9 % |
 | Temps total | ~220 ms | ~145 ms | ~235 ms |
 
-**Le bon réglage** : environ **250 points par page A4 à 4 mm d'espacement**. Le
+**Le bon réglage** : environ **250 points par page A4, 2,5 mm d'espacement et
+8 mm de liaisons**, soit les valeurs par défaut de `DEFAULT_SETTINGS`. Le
 vérifier à l'oeil est indispensable, les chiffres seuls trompent : à 500 points
 la solution est superbe mais les **numéros se chevauchent** et le puzzle est
 injouable.
@@ -253,9 +257,8 @@ injouable.
 - **Le budget de points est compté avant** le retrait des numéros incasables : on
   finit donc parfois sous la cible (219 points pour 250 demandés). Le curseur reste
   un ordre de grandeur.
-- **`stats.crowdedPairs`** compte encore les pastilles rapprochées, mais ce n'est
-  plus un défaut : les numéros sont décalés. La mesure qui compte est
-  `labelCollisions`, qui doit rester à zéro.
+- **Deux pastilles rapprochées ne sont pas un défaut** : les numéros sont
+  décalés. La mesure qui compte est `labelCollisions`, qui doit rester à zéro.
 - **L'espacement aux virages** descend à `0,6 × minSpacing` pour préserver la
   forme, donc l'espacement minimal réel est inférieur au réglage.
 - **La contrainte d'espacement l'emporte sur la fidélité** : écarter deux
@@ -329,7 +332,11 @@ curl -s https://<le-site>/ | grep 'og:image'     # doit pointer sur ce même hô
   `noUncheckedIndexedAccess`, `erasableSyntaxOnly` activés. Ne pas les
   désactiver. Conséquences à connaître : indexer un tableau donne
   `T | undefined` (d'où les `!` dans les boucles chaudes), et les propriétés de
-  paramètre de constructeur sont interdites.
+  paramètre de constructeur sont interdites. Les tests sont typecheckés aussi
+  (`tests/` est inclus dans `tsconfig.app.json`) : Vitest seul ne le fait pas.
+- **Une seule conversion réglages vers moteur** : `puzzleOptions()` traduit les
+  millimètres en pixels. L'application et tous les outils de `tools/` passent par
+  elle, pour mesurer exactement ce que l'utilisateur obtient.
 
 ---
 
@@ -426,7 +433,7 @@ Tout passe par le Makefile.
 | `make install` | Installe les dépendances |
 | `make start` | Serveur de développement sur http://localhost:1234 |
 | `make build` | Build de production |
-| `make check` | **build + lint + typecheck + knip + tests** |
+| `make check` | **build + format + lint + typecheck + knip + tests** |
 | `make test` | Tests unitaires et composants |
 | `make fix` | Formate puis lint |
 | `make fixtures` | Décode `tools/fixtures/*.jpg` en PGM (ffmpeg requis) |

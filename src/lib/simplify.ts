@@ -5,6 +5,33 @@ import type { Point } from '@/lib/types'
  * de Ramer-Douglas-Peucker, et mesure exacte de l'écart au tracé d'origine.
  * Rien ici ne connaît la notion de puzzle.
  */
+
+/** Longueur d'une ligne brisée, segment de fermeture compris pour une boucle. */
+export function polylineLength(points: Point[], closed = false): number {
+  let total = 0
+  for (let i = 1; i < points.length; i++) {
+    total += Math.hypot(points[i]!.x - points[i - 1]!.x, points[i]!.y - points[i - 1]!.y)
+  }
+  if (closed && points.length > 2) {
+    const head = points[0]!
+    const foot = points[points.length - 1]!
+    total += Math.hypot(head.x - foot.x, head.y - foot.y)
+  }
+  return total
+}
+
+/**
+ * Prolonge `target` par `points` sans répéter le point de jonction : deux traits
+ * mis bout à bout partagent leur extrémité commune.
+ */
+export function appendPath(target: Point[], points: Point[]): void {
+  for (const point of points) {
+    const last = target[target.length - 1]
+    if (last && last.x === point.x && last.y === point.y) continue
+    target.push(point)
+  }
+}
+
 /** Distance d'un point au segment [a, b]. */
 export function distanceToSegment(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x
@@ -63,14 +90,6 @@ export function simplifyIndices(points: Point[], tolerance: number): number[] {
   }
   return indices
 }
-
-export function simplify(points: Point[], tolerance: number): Point[] {
-  return simplifyIndices(points, tolerance).map((index) => points[index]!)
-}
-
-/**
- * Écarte les points trop rapprochés. On préserve toujours les extrémités et on
- * tolère un virage marqué plus serré que le reste, mais jamais collé : deux
 
 /**
  * Écart exact entre le tracé d'origine et la ligne brisée obtenue en reliant les

@@ -55,7 +55,7 @@ og: ## Regenerate the social share image (requires google-chrome)
 
 fix: format lint ## Format and lint all code
 
-check: build lint typecheck knip test ## Run all checks (build, lint, typecheck, knip, tests)
+check: build format-check lint typecheck knip test ## Run all checks (build, format, lint, typecheck, knip, tests)
 	@echo "All checks passed!"
 
 clean: ## Remove build artifacts and dependencies

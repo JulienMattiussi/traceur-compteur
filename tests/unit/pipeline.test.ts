@@ -36,7 +36,7 @@ describe('analyse', () => {
 
   it('chronomètre chaque étape', () => {
     const result = analyse(maskToGray(face()), 200, 200)
-    for (const key of ['binarize', 'thin', 'graph', 'baseline']) {
+    for (const key of ['binarize', 'thin', 'graph', 'interior']) {
       expect(result.timings[key]).toBeGreaterThanOrEqual(0)
     }
   })

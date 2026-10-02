@@ -17,7 +17,7 @@ export interface Link {
 }
 
 /** Un pas du circuit : une arête empruntée dans un sens donné. */
-export interface TourStep {
+interface TourStep {
   edge: GraphEdge | null
   from: number
   to: number
@@ -29,7 +29,11 @@ export interface Step extends TourStep {
 }
 
 /** Hierholzer itératif : renvoie le circuit eulérien comme une suite de pas. */
-export function eulerTour(start: number, adjacency: Map<number, Link[]>, used: Uint8Array): TourStep[] {
+export function eulerTour(
+  start: number,
+  adjacency: Map<number, Link[]>,
+  used: Uint8Array,
+): TourStep[] {
   const stack: { node: number; via: Link | null }[] = [{ node: start, via: null }]
   const cursor = new Map<number, number>()
   const popped: { node: number; via: Link | null }[] = []

@@ -49,6 +49,7 @@ export function renderPdf(puzzle: Puzzle, options: PdfOptions = {}): Uint8Array<
 
   const metrics = metricsFor(width, height)
   const dotRadius = metrics.dotRadius * scale
+  const ringRadius = metrics.ringRadius * scale
   const fontSize = metrics.fontSize * scale
 
   const body: string[] = ['0 g', '0 G', `${round(STROKE)} w`]
@@ -69,7 +70,7 @@ export function renderPdf(puzzle: Puzzle, options: PdfOptions = {}): Uint8Array<
         const cy = toY(dot.y)
 
         // Anneau sur le premier point : c'est là qu'on lève le crayon.
-        if (i === 0) body.push(circlePath(cx, cy, dotRadius + 1.4 * scale), 'S')
+        if (i === 0) body.push(circlePath(cx, cy, ringRadius), 'S')
         body.push(circlePath(cx, cy, dotRadius), 'f')
       }
     }

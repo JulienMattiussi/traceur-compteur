@@ -5,7 +5,8 @@ import { buildGraph, type GraphOptions } from '@/lib/graph'
 import { resolveLabels } from '@/lib/labels'
 import { metricsFor } from '@/lib/page'
 import { checkQuality } from '@/lib/quality'
-import { placeDots, type DotOptions } from '@/lib/dots'
+import { DEFAULT_SETTINGS } from '@/lib/settings'
+import { countDots, placeDots, type DotOptions } from '@/lib/dots'
 import { thin } from '@/lib/thin'
 import { decomposeTrails, minimumTrailCount } from '@/lib/trails'
 import type { DotSequence, GeometryStats, Mask, Puzzle, SkeletonGraph } from '@/lib/types'
@@ -18,18 +19,13 @@ export interface PipelineOptions extends BinarizeOptions, GraphOptions, DotOptio
   bridgeGap?: number
 }
 
-const DEFAULT_OPTIONS: Required<Omit<PipelineOptions, 'threshold' | 'maxDots'>> & {
-  threshold: number | 'auto'
-  maxDots?: number
-} = {
-  threshold: 'auto',
-  minBlobArea: 24,
-  pruneSpursBelow: 6,
-  tolerance: 1.8,
-  minSpacing: 7,
+/** Hors interface (outils, tests). Tolérance et espacement : ceux de `placeDots`. */
+const DEFAULT_OPTIONS: PipelineOptions = {
+  threshold: DEFAULT_SETTINGS.threshold,
+  minBlobArea: DEFAULT_SETTINGS.minBlobArea,
+  pruneSpursBelow: DEFAULT_SETTINGS.pruneSpursBelow,
   bridgeGap: 0,
-  // Sous deux fois l'espacement minimal, un parcours ne peut pas porter deux
-  // pastilles lisibles.
+  // Deux fois l'espacement par défaut de `placeDots`, comme `puzzleOptions`.
   minTrailLength: 14,
 }
 
@@ -69,7 +65,7 @@ export function analyse(
   mark = now()
   const interior = classifyInterior(mask, skeleton)
   const contourLoops = countInkComponents(mask)
-  timings.baseline = now() - mark
+  timings.interior = now() - mark
 
   let skeletonPixels = 0
   for (let i = 0; i < skeleton.data.length; i++) skeletonPixels += skeleton.data[i]!
@@ -135,7 +131,7 @@ export function buildPuzzle(
   // Les ponts se posent ici, pas dans `analyse` : c'est un choix de mise en
   // forme du puzzle, qu'on veut pouvoir rejouer sans refaire la
   // squelettisation. `analysis.graph` n'est jamais modifié.
-  const bridged = bridgeOddVertices(analysis.graph, settings.bridgeGap)
+  const bridged = bridgeOddVertices(analysis.graph, settings.bridgeGap ?? 0)
   timings.bridge = now() - mark
 
   mark = now()
@@ -165,10 +161,10 @@ export function buildPuzzle(
   const labels = resolved.labels
   timings.labels = now() - mark
 
-  const dots = sequences.reduce((total, sequence) => total + sequence.dots.length, 0)
+  const dots = countDots(sequences)
 
   mark = now()
-  const quality = checkQuality(sequences, width, settings.minSpacing)
+  const quality = checkQuality(sequences, width)
   timings.quality = now() - mark
 
   return {
@@ -186,7 +182,6 @@ export function buildPuzzle(
       tolerance: placement.tolerance,
       maxDeviation: placement.maxDeviation,
       minSpacing: quality.minSpacing,
-      crowdedPairs: quality.crowdedPairs,
       labelCollisions: labels.filter((label) => !label.placed).length,
       removedForLabels: resolved.removed,
       droppedTrails: placement.droppedTrails,

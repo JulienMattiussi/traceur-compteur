@@ -53,8 +53,6 @@ class PointGrid {
 export interface QualityReport {
   ambiguities: Ambiguity[]
   minSpacing: number
-  /** Paires de pastilles trop proches pour porter deux numéros lisibles. */
-  crowdedPairs: number
 }
 
 /**
@@ -66,23 +64,9 @@ export interface QualityReport {
  * unique est trivialement non ambigu. Dès qu'on ajoute des traits intérieurs qui
  * se croisent, c'est la contrainte dominante.
  */
-export function checkQuality(
-  sequences: DotSequence[],
-  width: number,
-  legibleSpacing = 0,
-): QualityReport {
-  const flat: Point[] = []
-  const owner: { sequence: number; index: number }[] = []
-
-  for (let s = 0; s < sequences.length; s++) {
-    const sequence = sequences[s]!
-    for (let i = 0; i < sequence.dots.length; i++) {
-      flat.push(sequence.dots[i]!)
-      owner.push({ sequence: s, index: i })
-    }
-  }
-
-  if (flat.length < 2) return { ambiguities: [], minSpacing: Infinity, crowdedPairs: 0 }
+export function checkQuality(sequences: DotSequence[], width: number): QualityReport {
+  const flat = sequences.flatMap((sequence) => sequence.dots)
+  if (flat.length < 2) return { ambiguities: [], minSpacing: Infinity }
 
   const grid = new PointGrid(flat, 24, width)
   const offsets: number[] = []
@@ -139,32 +123,5 @@ export function checkQuality(
     }
   }
 
-  // Encombrement : deux pastilles plus proches que l'espacement lisible sans
-  // être voisines dans une même séquence. C'est le défaut le plus visible à
-  // l'impression, et le seul qui rende vraiment un puzzle injouable : on ne sait
-  // plus quel numéro va avec quelle pastille.
-  let crowdedPairs = 0
-  if (legibleSpacing > 0) {
-    for (let i = 0; i < flat.length; i++) {
-      for (const j of grid.within(flat[i]!, legibleSpacing)) {
-        if (j <= i) continue
-        if (!areNeighboursInSequence(owner[i]!, owner[j]!, sequences)) crowdedPairs++
-      }
-    }
-  }
-
-  return { ambiguities, minSpacing, crowdedPairs }
-}
-
-/** Deux points consécutifs d'une même séquence ont le droit d'être serrés. */
-function areNeighboursInSequence(
-  a: { sequence: number; index: number },
-  b: { sequence: number; index: number },
-  sequences: DotSequence[],
-): boolean {
-  if (a.sequence !== b.sequence) return false
-  const gap = Math.abs(a.index - b.index)
-  if (gap === 1) return true
-  const sequence = sequences[a.sequence]!
-  return sequence.closed && gap === sequence.dots.length - 1
+  return { ambiguities, minSpacing }
 }

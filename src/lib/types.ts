@@ -116,8 +116,6 @@ interface PuzzleStats extends GeometryStats {
   /** Liaisons ajoutées pour fusionner des séquences, et longueur ainsi ajoutée. */
   bridges: number
   bridgeLength: number
-  /** Paires de pastilles trop proches pour rester lisibles. */
-  crowdedPairs: number
   /** Numéros n'ayant trouvé aucune place libre autour de leur pastille. */
   labelCollisions: number
   /** Points retirés parce que leur numéro était incasable. */

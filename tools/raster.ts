@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { unlinkSync, writeFileSync } from 'node:fs'
 import type { Point } from '@/lib/types'
 
 export interface Raster {
@@ -8,7 +8,7 @@ export interface Raster {
   rgb: Uint8Array
 }
 
-export type Colour = [number, number, number]
+export type Color = [number, number, number]
 
 /**
  * Rasteriseur minimal. Le but est de pouvoir regarder le résultat sans dépendre
@@ -20,27 +20,27 @@ export function createRaster(width: number, height: number): Raster {
   return { width, height, rgb }
 }
 
-function plot(raster: Raster, x: number, y: number, colour: Colour): void {
+function plot(raster: Raster, x: number, y: number, color: Color): void {
   if (x < 0 || y < 0 || x >= raster.width || y >= raster.height) return
   const p = (y * raster.width + x) * 3
-  raster.rgb[p] = colour[0]
-  raster.rgb[p + 1] = colour[1]
-  raster.rgb[p + 2] = colour[2]
+  raster.rgb[p] = color[0]
+  raster.rgb[p + 1] = color[1]
+  raster.rgb[p + 2] = color[2]
 }
 
-export function drawDisc(raster: Raster, cx: number, cy: number, radius: number, colour: Colour) {
+export function drawDisc(raster: Raster, cx: number, cy: number, radius: number, color: Color) {
   const r = Math.ceil(radius)
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       if (dx * dx + dy * dy <= radius * radius) {
-        plot(raster, Math.round(cx) + dx, Math.round(cy) + dy, colour)
+        plot(raster, Math.round(cx) + dx, Math.round(cy) + dy, color)
       }
     }
   }
 }
 
 /** Bresenham, épaissi par un disque quand on demande plus d'un pixel. */
-function drawLine(raster: Raster, from: Point, to: Point, colour: Colour, thickness = 1): void {
+function drawLine(raster: Raster, from: Point, to: Point, color: Color, thickness = 1): void {
   let x0 = Math.round(from.x)
   let y0 = Math.round(from.y)
   const x1 = Math.round(to.x)
@@ -53,8 +53,8 @@ function drawLine(raster: Raster, from: Point, to: Point, colour: Colour, thickn
   let error = dx - dy
 
   for (;;) {
-    if (thickness <= 1) plot(raster, x0, y0, colour)
-    else drawDisc(raster, x0, y0, thickness / 2, colour)
+    if (thickness <= 1) plot(raster, x0, y0, color)
+    else drawDisc(raster, x0, y0, thickness / 2, color)
 
     if (x0 === x1 && y0 === y1) break
     const doubled = 2 * error
@@ -72,15 +72,15 @@ function drawLine(raster: Raster, from: Point, to: Point, colour: Colour, thickn
 export function drawPolyline(
   raster: Raster,
   points: Point[],
-  colour: Colour,
+  color: Color,
   thickness = 1,
   closed = false,
 ): void {
   for (let i = 1; i < points.length; i++) {
-    drawLine(raster, points[i - 1]!, points[i]!, colour, thickness)
+    drawLine(raster, points[i - 1]!, points[i]!, color, thickness)
   }
   if (closed && points.length > 2) {
-    drawLine(raster, points[points.length - 1]!, points[0]!, colour, thickness)
+    drawLine(raster, points[points.length - 1]!, points[0]!, color, thickness)
   }
 }
 
@@ -90,5 +90,5 @@ export function writePng(path: string, raster: Raster): void {
   const header = Buffer.from(`P6\n${raster.width} ${raster.height}\n255\n`, 'ascii')
   writeFileSync(ppm, Buffer.concat([header, Buffer.from(raster.rgb)]))
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', ppm, path])
-  execFileSync('rm', ['-f', ppm])
+  unlinkSync(ppm)
 }

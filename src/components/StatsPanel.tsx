@@ -107,11 +107,7 @@ export function StatsPanel({ puzzle }: StatsPanelProps) {
       <SectionTitle>Ce que contient le dessin</SectionTitle>
       <Row label="Traits détectés" value={`${s.edges}`} />
       <Row label="Jonctions" hint="un contour seul en a 0" value={`${s.junctions}`} />
-      <Row
-        label="Tracé intérieur"
-        hint="perdu ailleurs"
-        value={`${interiorShare.toFixed(0)} %`}
-      />
+      <Row label="Tracé intérieur" hint="perdu ailleurs" value={`${interiorShare.toFixed(0)} %`} />
       <Row
         label="Sortie d'un contour seul"
         value={`${s.contourLoops} boucle${s.contourLoops > 1 ? 's' : ''}`}
