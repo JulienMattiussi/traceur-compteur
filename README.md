@@ -115,8 +115,8 @@ décode, tout le reste se calcule chez toi.
 
 - **Idéal** : dessin au trait noir sur fond blanc (coloriage, encrage, logo).
 - **Recadrer les filigranes** : un logo de site consomme des dizaines de points.
-- **Photos** : pas encore géré. Il faudrait un extracteur de traits appris, et
-  c'est le seul endroit du projet où une dépendance serait inévitable.
+- **Photos** : non prises en charge. L'outil est pensé pour les dessins au trait,
+  une photo donne un puzzle confus.
 
 ## Limites connues
 

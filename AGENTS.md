@@ -263,9 +263,10 @@ injouable.
   peut donc dépasser la tolérance demandée.
 - **Filigranes** : un logo de site consomme des dizaines de points. Recadrer
   l'image avant. `minBlobArea` ne suffit pas, ces blocs sont trop gros.
-- **Photos** : non géré. Il faudrait un extracteur de traits appris (PiDiNet ou
-  Informative Drawings, ~5 Mo en ONNX via onnxruntime-web). Le reste du pipeline
-  n'a pas besoin de changer.
+- **Photos** : hors périmètre, par choix. Un essai sans modèle (XDoG) extrayait
+  bien des traits, mais sans savoir isoler le sujet : le fond et le texte
+  produisaient des puzzles illisibles. L'outil vise les dessins au trait, où il
+  donne de bons résultats ; ne pas relancer cette piste.
 
 ---
 
