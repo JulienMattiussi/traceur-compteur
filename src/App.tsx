@@ -10,6 +10,7 @@ import { renderPdf } from '@/lib/pdf'
 import { analyse, buildPuzzle } from '@/lib/pipeline'
 import { DEFAULT_SETTINGS, puzzleOptions, type Settings } from '@/lib/settings'
 import { renderSvg } from '@/lib/svg'
+import { SeeAlso } from '@/components/SeeAlso'
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -186,6 +187,8 @@ export default function App() {
             )}
           </main>
         </div>
+
+        <SeeAlso current="traceur-compteur" />
 
         <footer className="mt-10 text-center text-sm text-slate-500 print:hidden">
           <a
